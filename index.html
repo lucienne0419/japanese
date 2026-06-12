@@ -262,6 +262,8 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
           <button class="btn btn-danger btn-sm" onclick="resetDefault()">초기화</button>
         </div>
       </div>
+      <div id="edit-theme-filter" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;"></div>
+      <div style="font-size:11px;color:var(--sub);margin-bottom:6px;" id="edit-count"></div>
       <div class="escroll" id="edit-body"></div>
       <p style="font-size:11px;color:var(--sub);text-align:center;margin-top:5px">저장 버튼을 눌러야 적용됩니다</p>
     </div>
@@ -1151,9 +1153,21 @@ function backSetup(){ document.getElementById('qresult').style.display='none'; d
 
 // ── 단어 편집 ──
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+let eTheme = ''; // 편집 탭 테마 필터
+
+function renderEditThemeFilter(){
+  const el=document.getElementById('edit-theme-filter'); if(!el) return;
+  el.innerHTML=['전체',...allThemes()].map(t=>`<button class="tchip${(t==='전체'&&!eTheme)||(t===eTheme)?' active':''}" style="font-size:11px;padding:3px 9px;" onclick="setETheme('${t==='전체'?'':t}')">${t}</button>`).join('');
+}
+function setETheme(t){ eTheme=t; renderEdit(); }
+
 function renderEdit(){
+  renderEditThemeFilter();
   const thOpts=allThemes().map(t=>`<option value="${esc(t)}">`).join('');
-  const rows=WORDS.map(w=>`<tr data-id="${w.id}"><td><input class="einp" data-f="kanji" value="${esc(w.kanji)}"></td><td><input class="einp" data-f="kana" value="${esc(w.kana)}"></td><td><input class="einp" data-f="meaning" value="${esc(w.meaning)}"></td><td><input class="einp" data-f="note" value="${esc(w.note||'')}"></td><td><input class="einp" data-f="theme" value="${esc(w.theme||'기타')}" list="edit-tdl"></td><td><button class="btn-del" onclick="delWord(${w.id})">삭제</button></td></tr>`).join('');
+  let list=eTheme?WORDS.filter(w=>(w.theme||'기타')===eTheme):[...WORDS];
+  const countEl=document.getElementById('edit-count');
+  if(countEl) countEl.textContent=`${list.length}개 표시 중 (전체 ${WORDS.length}개)`;
+  const rows=list.map(w=>`<tr data-id="${w.id}"><td><input class="einp" data-f="kanji" value="${esc(w.kanji)}"></td><td><input class="einp" data-f="kana" value="${esc(w.kana)}"></td><td><input class="einp" data-f="meaning" value="${esc(w.meaning)}"></td><td><input class="einp" data-f="note" value="${esc(w.note||'')}"></td><td><input class="einp" data-f="theme" value="${esc(w.theme||'기타')}" list="edit-tdl"></td><td><button class="btn-del" onclick="delWord(${w.id})">삭제</button></td></tr>`).join('');
   document.getElementById('edit-body').innerHTML=`<datalist id="edit-tdl">${thOpts}</datalist><table class="etbl"><thead><tr><th>한자</th><th>히라가나*</th><th>뜻*</th><th>부가설명</th><th>테마</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function addWord(){
@@ -1177,7 +1191,9 @@ function delWord(id){
 }
 function saveEdits(){
   const rows=document.querySelectorAll('#edit-body tbody tr');
-  const nw=[];
+  // 편집된 ID 목록
+  const editedIds=new Set();
+  const updated=[];
   rows.forEach(row=>{
     const id=parseInt(row.dataset.id);
     const kanji=(row.querySelector('[data-f="kanji"]').value||'').trim();
@@ -1187,9 +1203,13 @@ function saveEdits(){
     const theme=(row.querySelector('[data-f="theme"]')?.value||'기타').trim();
     if(!kana||!mean) return;
     const orig=WORDS.find(w=>w.id===id)||{quizCount:0,wrongCount:0,streak:0,addedAt:id};
-    nw.push({...orig,id,kanji,kana,meaning:mean,note,theme});
+    updated.push({...orig,id,kanji,kana,meaning:mean,note,theme});
+    editedIds.add(id);
   });
-  WORDS=nw; saveWords(WORDS); updateHdr(); renderDict(); alert('저장됐어요!');
+  // 테마 필터 중일 때: 보이지 않는 단어는 그대로 유지
+  const kept=WORDS.filter(w=>!editedIds.has(w.id));
+  WORDS=[...kept,...updated].sort((a,b)=>a.addedAt-b.addedAt);
+  saveWords(WORDS); updateHdr(); renderDict(); renderEdit(); alert('저장됐어요!');
 }
 
 // ── 테마 관리 ──
