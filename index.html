@@ -229,6 +229,10 @@ body{background:var(--bg);font-family:'Noto Sans KR','Noto Sans JP',sans-serif;c
           <button class="pool-tab active" onclick="setQuizPool('all')">전체</button>
           <button class="pool-tab" onclick="setQuizPool('wrong')">오답노트</button>
         </div>
+        <div style="margin-bottom:8px;">
+          <div style="font-size:11px;color:var(--sub);margin-bottom:6px;font-weight:600;">테마 선택</div>
+          <div id="quiz-theme-filter" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+        </div>
         <div id="quiz-pool-info" style="font-size:12px;color:var(--sub);margin-bottom:10px;"></div>
       </div>
       <div class="quiz-opt-row">
@@ -436,15 +440,15 @@ const BASE_WORDS = [
   {id:105,kanji:"",kana:"やすみ",meaning:"휴일",note:"",theme:"기초 표현",addedAt:105,quizCount:0,wrongCount:0,streak:0},
   {id:106,kanji:"",kana:"やすい",meaning:"싸다",note:"",theme:"기초 표현",addedAt:106,quizCount:0,wrongCount:0,streak:0},
   {id:107,kanji:"",kana:"あつい",meaning:"덥다",note:"",theme:"기초 표현",addedAt:107,quizCount:0,wrongCount:0,streak:0},
-  {id:108,kanji:"",kana:"むずかしい",meaning:"어렵다",note:"",theme:"기초 표현",addedAt:108,quizCount:0,wrongCount:0,streak:0},
+  {id:108,kanji:"難しい",kana:"むずかしい",meaning:"어렵다",note:"",theme:"기초 표현",addedAt:108,quizCount:0,wrongCount:0,streak:0},
   {id:109,kanji:"",kana:"おもしろい",meaning:"재미있다",note:"",theme:"기초 표현",addedAt:109,quizCount:0,wrongCount:0,streak:0},
   {id:110,kanji:"",kana:"きょうと",meaning:"교토",note:"",theme:"기초 표현",addedAt:110,quizCount:0,wrongCount:0,streak:0},
   {id:111,kanji:"",kana:"ほんとうに",meaning:"정말로",note:"",theme:"기초 표현",addedAt:111,quizCount:0,wrongCount:0,streak:0},
   {id:112,kanji:"",kana:"この",meaning:"이",note:"",theme:"기초 표현",addedAt:112,quizCount:0,wrongCount:0,streak:0},
   {id:113,kanji:"",kana:"とても",meaning:"대단히, 매우",note:"",theme:"기초 표현",addedAt:113,quizCount:0,wrongCount:0,streak:0},
-  {id:114,kanji:"",kana:"おいしい",meaning:"맛있다",note:"",theme:"기초 표현",addedAt:114,quizCount:0,wrongCount:0,streak:0},
+  {id:114,kanji:"美味しい",kana:"おいしい",meaning:"맛있다",note:"",theme:"기초 표현",addedAt:114,quizCount:0,wrongCount:0,streak:0},
   {id:115,kanji:"",kana:"どうですか",meaning:"어떻습니까?",note:"",theme:"기초 표현",addedAt:115,quizCount:0,wrongCount:0,streak:0},
-  {id:116,kanji:"",kana:"たのしい",meaning:"즐겁다",note:"",theme:"기초 표현",addedAt:116,quizCount:0,wrongCount:0,streak:0},
+  {id:116,kanji:"楽しい",kana:"たのしい",meaning:"즐겁다",note:"",theme:"기초 표현",addedAt:116,quizCount:0,wrongCount:0,streak:0},
   {id:117,kanji:"",kana:"あまり",meaning:"그다지",note:"",theme:"기초 표현",addedAt:117,quizCount:0,wrongCount:0,streak:0},
   {id:118,kanji:"",kana:"〜ない",meaning:"〜지 않다",note:"",theme:"기초 표현",addedAt:118,quizCount:0,wrongCount:0,streak:0},
   {id:119,kanji:"",kana:"ください",meaning:"주세요",note:"",theme:"기초 표현",addedAt:119,quizCount:0,wrongCount:0,streak:0},
@@ -468,11 +472,11 @@ const BASE_WORDS = [
   {id:137,kanji:"",kana:"のみもの",meaning:"음료",note:"",theme:"음식·식사",addedAt:137,quizCount:0,wrongCount:0,streak:0},
   {id:138,kanji:"",kana:"キムチ",meaning:"김치",note:"",theme:"음식·식사",addedAt:138,quizCount:0,wrongCount:0,streak:0},
   {id:139,kanji:"",kana:"かんこくご",meaning:"한국어",note:"",theme:"교과목",addedAt:139,quizCount:0,wrongCount:0,streak:0},
-  {id:140,kanji:"",kana:"からい",meaning:"맵다",note:"",theme:"기초 표현",addedAt:140,quizCount:0,wrongCount:0,streak:0},
+  {id:140,kanji:"辛い",kana:"からい",meaning:"맵다",note:"",theme:"기초 표현",addedAt:140,quizCount:0,wrongCount:0,streak:0},
   {id:141,kanji:"",kana:"さむい",meaning:"춥다",note:"",theme:"기초 표현",addedAt:141,quizCount:0,wrongCount:0,streak:0},
   {id:142,kanji:"",kana:"あの",meaning:"저",note:"",theme:"기초 표현",addedAt:142,quizCount:0,wrongCount:0,streak:0},
   {id:143,kanji:"",kana:"たかい",meaning:"비싸다",note:"",theme:"기초 표현",addedAt:143,quizCount:0,wrongCount:0,streak:0},
-  {id:144,kanji:"",kana:"やさしい",meaning:"쉽다",note:"",theme:"기초 표현",addedAt:144,quizCount:0,wrongCount:0,streak:0},
+  {id:144,kanji:"易しい",kana:"やさしい",meaning:"쉽다",note:"",theme:"기초 표현",addedAt:144,quizCount:0,wrongCount:0,streak:0},
   {id:145,kanji:"",kana:"そば",meaning:"메밀국수",note:"",theme:"음식·식사",addedAt:145,quizCount:0,wrongCount:0,streak:0},
   {id:146,kanji:"",kana:"おこのみやき",meaning:"오코노미야키",note:"",theme:"음식·식사",addedAt:146,quizCount:0,wrongCount:0,streak:0},
   {id:147,kanji:"",kana:"どんぶり",meaning:"덮밥",note:"",theme:"음식·식사",addedAt:147,quizCount:0,wrongCount:0,streak:0},
@@ -813,7 +817,109 @@ const BASE_WORDS = [
   {id:482,kanji:"",kana:"じゅっぱい",meaning:"10잔",note:"",theme:"수사·조수사",addedAt:482,quizCount:0,wrongCount:0,streak:0},
   {id:483,kanji:"",kana:"なんばい",meaning:"몇 잔",note:"",theme:"수사·조수사",addedAt:483,quizCount:0,wrongCount:0,streak:0},
   {id:484,kanji:"始業式",kana:"しぎょうしき",meaning:"개학",note:"",theme:"기초 표현",addedAt:484,quizCount:0,wrongCount:0,streak:0},
-  {id:485,kanji:"部活",kana:"ぶかつ",meaning:"동아리/부활동",note:"",theme:"학교행사",addedAt:485,quizCount:0,wrongCount:0,streak:0}
+  {id:485,kanji:"部活",kana:"ぶかつ",meaning:"동아리/부활동",note:"",theme:"학교행사",addedAt:485,quizCount:0,wrongCount:0,streak:0},
+  {id:486,kanji:"優しい",kana:"やさしい",meaning:"상냥하다",note:"",theme:"형용사",addedAt:486,quizCount:0,wrongCount:0,streak:0},
+  {id:487,kanji:"嬉しい",kana:"うれしい",meaning:"기쁘다",note:"",theme:"형용사",addedAt:487,quizCount:0,wrongCount:0,streak:0},
+  {id:488,kanji:"悲しい",kana:"かなしい",meaning:"슬프다",note:"",theme:"형용사",addedAt:488,quizCount:0,wrongCount:0,streak:0},
+  {id:489,kanji:"寂しい",kana:"さびしい",meaning:"외롭다",note:"",theme:"형용사",addedAt:489,quizCount:0,wrongCount:0,streak:0},
+  {id:490,kanji:"恥ずかしい",kana:"はずかしい",meaning:"부끄럽다",note:"",theme:"형용사",addedAt:490,quizCount:0,wrongCount:0,streak:0},
+  {id:491,kanji:"忙しい",kana:"いそがしい",meaning:"바쁘다",note:"",theme:"형용사",addedAt:491,quizCount:0,wrongCount:0,streak:0},
+  {id:492,kanji:"珍しい",kana:"めずらしい",meaning:"드물다",note:"",theme:"형용사",addedAt:492,quizCount:0,wrongCount:0,streak:0},
+  {id:493,kanji:"厳しい",kana:"きびしい",meaning:"엄격하다",note:"",theme:"형용사",addedAt:493,quizCount:0,wrongCount:0,streak:0},
+  {id:494,kanji:"涼しい",kana:"すずしい",meaning:"시원하다",note:"",theme:"형용사",addedAt:494,quizCount:0,wrongCount:0,streak:0},
+  {id:495,kanji:"暑苦しい",kana:"あつくるしい",meaning:"답답하게 덥다",note:"",theme:"형용사",addedAt:495,quizCount:0,wrongCount:0,streak:0},
+  {id:496,kanji:"怖い",kana:"こわい",meaning:"무섭다",note:"",theme:"형용사",addedAt:496,quizCount:0,wrongCount:0,streak:0},
+  {id:497,kanji:"細かい",kana:"こまかい",meaning:"세밀하다",note:"",theme:"형용사",addedAt:497,quizCount:0,wrongCount:0,streak:0},
+  {id:498,kanji:"温かい",kana:"あたたかい",meaning:"따뜻하다 (음식·손)",note:"",theme:"형용사",addedAt:498,quizCount:0,wrongCount:0,streak:0},
+  {id:499,kanji:"暖かい",kana:"あたたかい",meaning:"따뜻하다 (날씨·계절)",note:"",theme:"형용사",addedAt:499,quizCount:0,wrongCount:0,streak:0},
+  {id:500,kanji:"冷たい",kana:"つめたい",meaning:"차갑다",note:"",theme:"형용사",addedAt:500,quizCount:0,wrongCount:0,streak:0},
+  {id:501,kanji:"眠い",kana:"ねむい",meaning:"졸리다",note:"",theme:"형용사",addedAt:501,quizCount:0,wrongCount:0,streak:0},
+  {id:502,kanji:"痒い",kana:"かゆい",meaning:"가렵다",note:"",theme:"형용사",addedAt:502,quizCount:0,wrongCount:0,streak:0},
+  {id:503,kanji:"羨ましい",kana:"うらやましい",meaning:"부럽다",note:"",theme:"형용사",addedAt:503,quizCount:0,wrongCount:0,streak:0},
+  {id:504,kanji:"懐かしい",kana:"なつかしい",meaning:"그립다",note:"",theme:"형용사",addedAt:504,quizCount:0,wrongCount:0,streak:0},
+  {id:505,kanji:"怪しい",kana:"あやしい",meaning:"수상하다",note:"",theme:"형용사",addedAt:505,quizCount:0,wrongCount:0,streak:0},
+  {id:506,kanji:"面倒くさい",kana:"めんどうくさい",meaning:"귀찮다",note:"",theme:"형용사",addedAt:506,quizCount:0,wrongCount:0,streak:0},
+  {id:507,kanji:"暑い",kana:"あつい",meaning:"덥다 (날씨·기온)",note:"",theme:"형용사",addedAt:507,quizCount:0,wrongCount:0,streak:0},
+  {id:508,kanji:"熱い",kana:"あつい",meaning:"뜨겁다 (음식·물·온도)",note:"",theme:"형용사",addedAt:508,quizCount:0,wrongCount:0,streak:0},
+  {id:509,kanji:"厚い",kana:"あつい",meaning:"두껍다",note:"",theme:"형용사",addedAt:509,quizCount:0,wrongCount:0,streak:0},
+  {id:510,kanji:"早い",kana:"はやい",meaning:"이르다 (시간)",note:"",theme:"형용사",addedAt:510,quizCount:0,wrongCount:0,streak:0},
+  {id:511,kanji:"速い",kana:"はやい",meaning:"빠르다 (속도)",note:"",theme:"형용사",addedAt:511,quizCount:0,wrongCount:0,streak:0},
+  {id:512,kanji:"辛い",kana:"つらい",meaning:"괴롭다",note:"",theme:"형용사",addedAt:512,quizCount:0,wrongCount:0,streak:0},
+  {id:513,kanji:"若い",kana:"わかい",meaning:"젊다",note:"",theme:"형용사",addedAt:513,quizCount:0,wrongCount:0,streak:0},
+  {id:514,kanji:"赤い",kana:"あかい",meaning:"빨갛다",note:"",theme:"형용사",addedAt:514,quizCount:0,wrongCount:0,streak:0},
+  {id:515,kanji:"青い",kana:"あおい",meaning:"파랗다",note:"",theme:"형용사",addedAt:515,quizCount:0,wrongCount:0,streak:0},
+  {id:516,kanji:"白い",kana:"しろい",meaning:"하얗다",note:"",theme:"형용사",addedAt:516,quizCount:0,wrongCount:0,streak:0},
+  {id:517,kanji:"黒い",kana:"くろい",meaning:"검다",note:"",theme:"형용사",addedAt:517,quizCount:0,wrongCount:0,streak:0},
+  {id:518,kanji:"丸い",kana:"まるい",meaning:"둥글다",note:"",theme:"형용사",addedAt:518,quizCount:0,wrongCount:0,streak:0},
+  {id:519,kanji:"四角い",kana:"しかくい",meaning:"네모나다",note:"",theme:"형용사",addedAt:519,quizCount:0,wrongCount:0,streak:0},
+  {id:520,kanji:"柔らかい",kana:"やわらかい",meaning:"부드럽다",note:"",theme:"형용사",addedAt:520,quizCount:0,wrongCount:0,streak:0},
+  {id:521,kanji:"固い",kana:"かたい",meaning:"굳다, 딱딱하다",note:"",theme:"형용사",addedAt:521,quizCount:0,wrongCount:0,streak:0},
+  {id:522,kanji:"硬い",kana:"かたい",meaning:"단단하다",note:"",theme:"형용사",addedAt:522,quizCount:0,wrongCount:0,streak:0},
+  {id:523,kanji:"堅い",kana:"かたい",meaning:"엄격하다, 견실하다",note:"",theme:"형용사",addedAt:523,quizCount:0,wrongCount:0,streak:0},
+  {id:524,kanji:"浅い",kana:"あさい",meaning:"얕다",note:"",theme:"형용사",addedAt:524,quizCount:0,wrongCount:0,streak:0},
+  {id:525,kanji:"深い",kana:"ふかい",meaning:"깊다",note:"",theme:"형용사",addedAt:525,quizCount:0,wrongCount:0,streak:0},
+  {id:526,kanji:"遠い",kana:"とおい",meaning:"멀다",note:"",theme:"형용사",addedAt:526,quizCount:0,wrongCount:0,streak:0},
+  {id:527,kanji:"近い",kana:"ちかい",meaning:"가깝다",note:"",theme:"형용사",addedAt:527,quizCount:0,wrongCount:0,streak:0},
+  {id:528,kanji:"明るい",kana:"あかるい",meaning:"밝다",note:"",theme:"형용사",addedAt:528,quizCount:0,wrongCount:0,streak:0},
+  {id:529,kanji:"暗い",kana:"くらい",meaning:"어둡다",note:"",theme:"형용사",addedAt:529,quizCount:0,wrongCount:0,streak:0},
+  {id:530,kanji:"甘い",kana:"あまい",meaning:"달다",note:"",theme:"형용사",addedAt:530,quizCount:0,wrongCount:0,streak:0},
+  {id:531,kanji:"粗い",kana:"あらい",meaning:"거칠다 (입자·성격이 세밀하지 않음)",note:"",theme:"형용사",addedAt:531,quizCount:0,wrongCount:0,streak:0},
+  {id:532,kanji:"荒い",kana:"あらい",meaning:"거칠다 (파도·운전·성격이 난폭함)",note:"",theme:"형용사",addedAt:532,quizCount:0,wrongCount:0,streak:0},
+  {id:533,kanji:"北海道",kana:"ほっかいどう",meaning:"홋카이도",note:"",theme:"일본 지리",addedAt:533,quizCount:0,wrongCount:0,streak:0},
+  {id:534,kanji:"青森県",kana:"あおもりけん",meaning:"아오모리현",note:"",theme:"일본 지리",addedAt:534,quizCount:0,wrongCount:0,streak:0},
+  {id:535,kanji:"岩手県",kana:"いわてけん",meaning:"이와테현",note:"",theme:"일본 지리",addedAt:535,quizCount:0,wrongCount:0,streak:0},
+  {id:536,kanji:"宮城県",kana:"みやぎけん",meaning:"미야기현",note:"",theme:"일본 지리",addedAt:536,quizCount:0,wrongCount:0,streak:0},
+  {id:537,kanji:"秋田県",kana:"あきたけん",meaning:"아키타현",note:"",theme:"일본 지리",addedAt:537,quizCount:0,wrongCount:0,streak:0},
+  {id:538,kanji:"山形県",kana:"やまがたけん",meaning:"야마가타현",note:"",theme:"일본 지리",addedAt:538,quizCount:0,wrongCount:0,streak:0},
+  {id:539,kanji:"福島県",kana:"ふくしまけん",meaning:"후쿠시마현",note:"",theme:"일본 지리",addedAt:539,quizCount:0,wrongCount:0,streak:0},
+  {id:540,kanji:"茨城県",kana:"いばらきけん",meaning:"이바라키현",note:"",theme:"일본 지리",addedAt:540,quizCount:0,wrongCount:0,streak:0},
+  {id:541,kanji:"栃木県",kana:"とちぎけん",meaning:"도치기현",note:"",theme:"일본 지리",addedAt:541,quizCount:0,wrongCount:0,streak:0},
+  {id:542,kanji:"群馬県",kana:"ぐんまけん",meaning:"군마현",note:"",theme:"일본 지리",addedAt:542,quizCount:0,wrongCount:0,streak:0},
+  {id:543,kanji:"埼玉県",kana:"さいたまけん",meaning:"사이타마현",note:"",theme:"일본 지리",addedAt:543,quizCount:0,wrongCount:0,streak:0},
+  {id:544,kanji:"千葉県",kana:"ちばけん",meaning:"지바현",note:"",theme:"일본 지리",addedAt:544,quizCount:0,wrongCount:0,streak:0},
+  {id:545,kanji:"東京都",kana:"とうきょうと",meaning:"도쿄도",note:"",theme:"일본 지리",addedAt:545,quizCount:0,wrongCount:0,streak:0},
+  {id:546,kanji:"神奈川県",kana:"かながわけん",meaning:"가나가와현",note:"",theme:"일본 지리",addedAt:546,quizCount:0,wrongCount:0,streak:0},
+  {id:547,kanji:"新潟県",kana:"にいがたけん",meaning:"니가타현",note:"",theme:"일본 지리",addedAt:547,quizCount:0,wrongCount:0,streak:0},
+  {id:548,kanji:"富山県",kana:"とやまけん",meaning:"도야마현",note:"",theme:"일본 지리",addedAt:548,quizCount:0,wrongCount:0,streak:0},
+  {id:549,kanji:"石川県",kana:"いしかわけん",meaning:"이시카와현",note:"",theme:"일본 지리",addedAt:549,quizCount:0,wrongCount:0,streak:0},
+  {id:550,kanji:"福井県",kana:"ふくいけん",meaning:"후쿠이현",note:"",theme:"일본 지리",addedAt:550,quizCount:0,wrongCount:0,streak:0},
+  {id:551,kanji:"山梨県",kana:"やまなしけん",meaning:"야마나시현",note:"",theme:"일본 지리",addedAt:551,quizCount:0,wrongCount:0,streak:0},
+  {id:552,kanji:"長野県",kana:"ながのけん",meaning:"나가노현",note:"",theme:"일본 지리",addedAt:552,quizCount:0,wrongCount:0,streak:0},
+  {id:553,kanji:"岐阜県",kana:"ぎふけん",meaning:"기후현",note:"",theme:"일본 지리",addedAt:553,quizCount:0,wrongCount:0,streak:0},
+  {id:554,kanji:"静岡県",kana:"しずおかけん",meaning:"시즈오카현",note:"",theme:"일본 지리",addedAt:554,quizCount:0,wrongCount:0,streak:0},
+  {id:555,kanji:"愛知県",kana:"あいちけん",meaning:"아이치현",note:"",theme:"일본 지리",addedAt:555,quizCount:0,wrongCount:0,streak:0},
+  {id:556,kanji:"三重県",kana:"みえけん",meaning:"미에현",note:"",theme:"일본 지리",addedAt:556,quizCount:0,wrongCount:0,streak:0},
+  {id:557,kanji:"滋賀県",kana:"しがけん",meaning:"시가현",note:"",theme:"일본 지리",addedAt:557,quizCount:0,wrongCount:0,streak:0},
+  {id:558,kanji:"京都府",kana:"きょうとふ",meaning:"교토부",note:"",theme:"일본 지리",addedAt:558,quizCount:0,wrongCount:0,streak:0},
+  {id:559,kanji:"大阪府",kana:"おおさかふ",meaning:"오사카부",note:"",theme:"일본 지리",addedAt:559,quizCount:0,wrongCount:0,streak:0},
+  {id:560,kanji:"兵庫県",kana:"ひょうごけん",meaning:"효고현",note:"",theme:"일본 지리",addedAt:560,quizCount:0,wrongCount:0,streak:0},
+  {id:561,kanji:"奈良県",kana:"ならけん",meaning:"나라현",note:"",theme:"일본 지리",addedAt:561,quizCount:0,wrongCount:0,streak:0},
+  {id:562,kanji:"和歌山県",kana:"わかやまけん",meaning:"와카야마현",note:"",theme:"일본 지리",addedAt:562,quizCount:0,wrongCount:0,streak:0},
+  {id:563,kanji:"鳥取県",kana:"とっとりけん",meaning:"돗토리현",note:"",theme:"일본 지리",addedAt:563,quizCount:0,wrongCount:0,streak:0},
+  {id:564,kanji:"島根県",kana:"しまねけん",meaning:"시마네현",note:"",theme:"일본 지리",addedAt:564,quizCount:0,wrongCount:0,streak:0},
+  {id:565,kanji:"岡山県",kana:"おかやまけん",meaning:"오카야마현",note:"",theme:"일본 지리",addedAt:565,quizCount:0,wrongCount:0,streak:0},
+  {id:566,kanji:"広島県",kana:"ひろしまけん",meaning:"히로시마현",note:"",theme:"일본 지리",addedAt:566,quizCount:0,wrongCount:0,streak:0},
+  {id:567,kanji:"山口県",kana:"やまぐちけん",meaning:"야마구치현",note:"",theme:"일본 지리",addedAt:567,quizCount:0,wrongCount:0,streak:0},
+  {id:568,kanji:"徳島県",kana:"とくしまけん",meaning:"도쿠시마현",note:"",theme:"일본 지리",addedAt:568,quizCount:0,wrongCount:0,streak:0},
+  {id:569,kanji:"香川県",kana:"かがわけん",meaning:"가가와현",note:"",theme:"일본 지리",addedAt:569,quizCount:0,wrongCount:0,streak:0},
+  {id:570,kanji:"愛媛県",kana:"えひめけん",meaning:"에히메현",note:"",theme:"일본 지리",addedAt:570,quizCount:0,wrongCount:0,streak:0},
+  {id:571,kanji:"高知県",kana:"こうちけん",meaning:"고치현",note:"",theme:"일본 지리",addedAt:571,quizCount:0,wrongCount:0,streak:0},
+  {id:572,kanji:"福岡県",kana:"ふくおかけん",meaning:"후쿠오카현",note:"",theme:"일본 지리",addedAt:572,quizCount:0,wrongCount:0,streak:0},
+  {id:573,kanji:"佐賀県",kana:"さがけん",meaning:"사가현",note:"",theme:"일본 지리",addedAt:573,quizCount:0,wrongCount:0,streak:0},
+  {id:574,kanji:"長崎県",kana:"ながさきけん",meaning:"나가사키현",note:"",theme:"일본 지리",addedAt:574,quizCount:0,wrongCount:0,streak:0},
+  {id:575,kanji:"熊本県",kana:"くまもとけん",meaning:"구마모토현",note:"",theme:"일본 지리",addedAt:575,quizCount:0,wrongCount:0,streak:0},
+  {id:576,kanji:"大分県",kana:"おおいたけん",meaning:"오이타현",note:"",theme:"일본 지리",addedAt:576,quizCount:0,wrongCount:0,streak:0},
+  {id:577,kanji:"宮崎県",kana:"みやざきけん",meaning:"미야자키현",note:"",theme:"일본 지리",addedAt:577,quizCount:0,wrongCount:0,streak:0},
+  {id:578,kanji:"鹿児島県",kana:"かごしまけん",meaning:"가고시마현",note:"",theme:"일본 지리",addedAt:578,quizCount:0,wrongCount:0,streak:0},
+  {id:579,kanji:"沖縄県",kana:"おきなわけん",meaning:"오키나와현",note:"",theme:"일본 지리",addedAt:579,quizCount:0,wrongCount:0,streak:0},
+  {id:580,kanji:"東北地方",kana:"とうほくちほう",meaning:"도호쿠 지방",note:"",theme:"일본 지리",addedAt:580,quizCount:0,wrongCount:0,streak:0},
+  {id:581,kanji:"関東地方",kana:"かんとうちほう",meaning:"간토 지방",note:"",theme:"일본 지리",addedAt:581,quizCount:0,wrongCount:0,streak:0},
+  {id:582,kanji:"中部地方",kana:"ちゅうぶちほう",meaning:"주부 지방",note:"",theme:"일본 지리",addedAt:582,quizCount:0,wrongCount:0,streak:0},
+  {id:583,kanji:"近畿地方",kana:"きんきちほう",meaning:"긴키 지방",note:"",theme:"일본 지리",addedAt:583,quizCount:0,wrongCount:0,streak:0},
+  {id:584,kanji:"中国地方",kana:"ちゅうごくちほう",meaning:"주고쿠 지방",note:"",theme:"일본 지리",addedAt:584,quizCount:0,wrongCount:0,streak:0},
+  {id:585,kanji:"四国地方",kana:"しこくちほう",meaning:"시코쿠 지방",note:"",theme:"일본 지리",addedAt:585,quizCount:0,wrongCount:0,streak:0},
+  {id:586,kanji:"九州地方",kana:"きゅうしゅうちほう",meaning:"규슈 지방",note:"",theme:"일본 지리",addedAt:586,quizCount:0,wrongCount:0,streak:0},
+  {id:587,kanji:"沖縄地方",kana:"おきなわちほう",meaning:"오키나와 지방",note:"",theme:"일본 지리",addedAt:587,quizCount:0,wrongCount:0,streak:0}
 ];
 
 // ══════════════════════════════════════════════
@@ -1036,6 +1142,7 @@ const MODES=[
   {id:'sa-roma',  label:'로마자 입력',               desc:'일본어 보고 로마자로 입력'},
 ];
 let quizPool='all';
+let quizTheme='';  // '' = 전체 테마
 
 function buildModeCards(){
   document.getElementById('mode-cards').innerHTML=MODES.map((m,i)=>`
@@ -1054,17 +1161,36 @@ function selectMode(el){
 }
 function setQuizPool(p){
   quizPool=p;
+  if(p==='wrong') quizTheme=''; // 오답노트 선택 시 테마 초기화
   document.querySelectorAll('.pool-tab').forEach((b,i)=>b.classList.toggle('active',['all','wrong'][i]===p));
   document.getElementById('master-notice').style.display=p==='all'?'block':'none';
   updateQuizPool();
 }
 function updateQuizPool(){
+  renderQuizThemeFilter();
   const list=getQuizList();
   document.getElementById('quiz-n-max').textContent=`최대 ${list.length}개`;
+  const themeLabel = quizTheme ? ` [${quizTheme}]` : '';
   document.getElementById('quiz-pool-info').textContent=
     quizPool==='all'
-      ? `마스터 제외 ${list.length}개 출제 가능`
-      : `오답노트 ${list.length}개`;
+      ? `마스터 제외 ${list.length}개 출제 가능${themeLabel}`
+      : `오답노트 ${list.length}개${themeLabel}`;
+}
+
+function renderQuizThemeFilter(){
+  const el = document.getElementById('quiz-theme-filter');
+  if(!el) return;
+  const themes = ['전체', ...Array.from(new Set(WORDS.map(w=>w.theme||'기타'))).sort()];
+  el.innerHTML = themes.map(t=>`
+    <button class="theme-chip${(t==='전체'&&!quizTheme)||(t===quizTheme)?' active':''}"
+      style="font-size:11px;padding:4px 10px;"
+      onclick="setQuizTheme('${t==='전체'?'':t}')">${t}</button>`
+  ).join('');
+}
+
+function setQuizTheme(theme){
+  quizTheme = theme;
+  updateQuizPool();
 }
 function getQuizList(){
   const mode = document.querySelector('input[name="qmode"]:checked')?.value||'';
@@ -1072,9 +1198,10 @@ function getQuizList(){
   if(quizPool==='wrong'){
     list = WORDS.filter(w=>WRONG_SET.has(w.id));
   } else {
-    // 모드별 마스터 제외
     list = WORDS.filter(w=>!isMastered(w.id, mode));
   }
+  // 테마 필터
+  if(quizTheme) list = list.filter(w=>(w.theme||'기타')===quizTheme);
   // 모드별 추가 필터
   if(mode==='sa-note')  list = list.filter(w=>w.note&&w.note.trim());
   if(mode==='sa-kanji') list = list.filter(w=>!!w.kanji);
