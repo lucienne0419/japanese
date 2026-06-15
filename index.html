@@ -150,7 +150,7 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
 <body>
 <div id="hdr">
   <div id="hdr-top">
-    <div class="logo">日<span>本語</span> 単語帳</div>
+    <div class="logo"><span>日本語</span> 単語帳</div>
     <div id="hdr-stats">
       <div class="chip">📚 총 <b id="h-total">0</b>개</div>
       <div class="chip">⭐ 마스터 <b id="h-master">0</b>개</div>
@@ -365,6 +365,9 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
 </div>
 
 <script>
+const BASE_WORDS_VERSION = '2026-06-15'; // 단어 업데이트 시 이 값을 바꾸면 자동 반영
+const SK_WORDS_VER = 'jpq_words_ver';
+
 const BASE_WORDS = [
   {id:1,kanji:"",kana:"いちじ",meaning:"1시",note:"",theme:"시간",addedAt:1,quizCount:0,wrongCount:0,streak:0},
   {id:2,kanji:"",kana:"にじ",meaning:"2시",note:"",theme:"시간",addedAt:2,quizCount:0,wrongCount:0,streak:0},
@@ -937,13 +940,43 @@ const MTHRESH    = 3;
 
 // ── 데이터 로드 ──
 function loadWords(){
-  try{ const s=localStorage.getItem(SK_WORDS); if(s) return JSON.parse(s); }catch{}
+  try{
+    const savedVer = localStorage.getItem(SK_WORDS_VER);
+    const saved = localStorage.getItem(SK_WORDS);
+
+    // 버전이 같으면 저장된 데이터 그대로 사용
+    if(saved && savedVer === BASE_WORDS_VERSION){
+      return JSON.parse(saved);
+    }
+
+    // 버전이 다르면 (새 단어 데이터가 있으면):
+    // 기존 학습 기록(quizCount, wrongCount)을 kana+meaning 기준으로 이전
+    if(saved){
+      const old = JSON.parse(saved);
+      const oldMap = {};
+      old.forEach(w => { oldMap[w.kana+'|'+w.meaning] = w; });
+
+      const merged = BASE_WORDS.map(w => {
+        const key = w.kana+'|'+w.meaning;
+        const prev = oldMap[key];
+        if(prev){
+          // 단어 내용은 새 것, 학습 기록은 기존 것 유지
+          return {...w, quizCount: prev.quizCount||0, wrongCount: prev.wrongCount||0, streak: prev.streak||0};
+        }
+        return {...w};
+      });
+      localStorage.setItem(SK_WORDS_VER, BASE_WORDS_VERSION);
+      return merged;
+    }
+  }catch{}
+  // 완전 처음이면 BASE_WORDS 그대로
+  localStorage.setItem(SK_WORDS_VER, BASE_WORDS_VERSION);
   return JSON.parse(JSON.stringify(BASE_WORDS));
 }
 function saveWords(w){ localStorage.setItem(SK_WORDS,JSON.stringify(w)); }
 function resetDefault(){
   if(!confirm('모든 단어를 기본값으로 초기화할까요?\n(마스터·오답 기록도 삭제됩니다)')) return;
-  [SK_WORDS,SK_MASTER,SK_WRONG,SK_WLOG,SK_STREAKS].forEach(k=>localStorage.removeItem(k));
+  [SK_WORDS,SK_MASTER,SK_WRONG,SK_WLOG,SK_STREAKS,SK_WORDS_VER].forEach(k=>localStorage.removeItem(k));
   init();
 }
 
@@ -1188,6 +1221,7 @@ function procResult(ok){
     QS.wrongs.push(w); saveWrong();
   }
   saveWords(WORDS);
+  triggerAutoSave(); // 퀴즈 후 자동 저장 예약
 }
 function showMToast(word){ const t=document.getElementById('master-toast'); t.textContent=`⭐ "${word}" 마스터!`; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
 
@@ -1235,7 +1269,7 @@ function addWord(){
   WORDS.push({id:newId,kanji,kana,meaning:mean,note,theme,addedAt:newId,quizCount:0,wrongCount:0,streak:0});
   saveWords(WORDS);
   ['add-kanji','add-kana','add-mean','add-note','add-theme'].forEach(id=>document.getElementById(id).value='');
-  renderEdit(); renderThemeFilter(); renderQThemeFilter(); updateHdr();
+  renderEdit(); renderThemeFilter(); renderQThemeFilter(); updateHdr(); triggerAutoSave();
 }
 function delWord(id){
   if(!confirm('삭제할까요?')) return;
@@ -1263,7 +1297,7 @@ function saveEdits(){
   // 테마 필터 중일 때: 보이지 않는 단어는 그대로 유지
   const kept=WORDS.filter(w=>!editedIds.has(w.id));
   WORDS=[...kept,...updated].sort((a,b)=>a.addedAt-b.addedAt);
-  saveWords(WORDS); updateHdr(); renderDict(); renderEdit(); alert('저장됐어요!');
+  saveWords(WORDS); updateHdr(); renderDict(); renderEdit(); triggerAutoSave(); alert('저장됐어요!');
 }
 
 // ── 테마 관리 ──
@@ -1285,6 +1319,28 @@ const G_SCOPE='https://www.googleapis.com/auth/drive.file';
 const G_DISC='https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
 const G_FILE='japanese_vocab_save.json';
 let gToken=null, gFileId=null, gapiOk=false, gisOk=false, gTokenClient=null;
+let autoSaveTimer=null;
+
+// ── 자동 저장 (디바운스 30초) ──
+function triggerAutoSave(){
+  if(!gToken) return; // 로그인 안 됐으면 스킵
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(async ()=>{
+    setSt('💾 자동 저장 중…');
+    await gSave(true); // silent=true
+  }, 30000); // 30초 후 저장
+}
+
+// 페이지 닫을 때 저장 시도
+window.addEventListener('beforeunload', ()=>{
+  if(!gToken) return;
+  // beforeunload에선 비동기 fetch 보장 안 되므로 sendBeacon 사용
+  const json = JSON.stringify({version:2,savedAt:new Date().toISOString(),words:WORDS,masterMap:MMAP,wrongSet:[...WSET],wrongLog:WLOG,streaks:STREAKS});
+  const blob = new Blob([json], {type:'application/json'});
+  if(gFileId){
+    navigator.sendBeacon(`https://www.googleapis.com/upload/drive/v3/files/${gFileId}?uploadType=media`, blob);
+  }
+});
 
 window.gapiLoaded=function(){ gapi.load('client',async()=>{ await gapi.client.init({apiKey:G_KEY,discoveryDocs:[G_DISC]}); gapiOk=true; chkLogin(); }); }
 window.gisLoaded=function(){ gTokenClient=google.accounts.oauth2.initTokenClient({client_id:G_CID,scope:G_SCOPE,callback:async r=>{ if(r.error){ setSt('❌ 로그인 실패'); return; } gToken=r.access_token; showDrive(); setSt('✅ 로그인됨'); await findFile(); }}); gisOk=true; chkLogin(); }
@@ -1293,7 +1349,7 @@ function showDrive(){ document.getElementById('btn-login').style.display='none';
 function setSt(m){ document.getElementById('drive-st').textContent=m; }
 function gLogin(){ if(!gapiOk||!gisOk){ setSt('API 로딩 중…'); return; } gTokenClient.requestAccessToken({prompt:'consent'}); }
 async function findFile(){ try{ const r=await gapi.client.drive.files.list({q:`name='${G_FILE}' and trashed=false`,fields:'files(id,name)',spaces:'drive'}); const f=r.result.files; if(f&&f.length>0){ gFileId=f[0].id; setSt('✅ 로그인됨 (저장 파일 있음)'); } else setSt('✅ 로그인됨'); }catch(e){ setSt('파일 검색 오류'); } }
-async function gSave(){ if(!gToken){ setSt('먼저 로그인해주세요'); return; } setSt('저장 중…'); try{ const json=JSON.stringify({version:2,savedAt:new Date().toISOString(),words:WORDS,masterMap:MMAP,wrongSet:[...WSET],wrongLog:WLOG,streaks:STREAKS}); if(gFileId){ await fetch(`https://www.googleapis.com/upload/drive/v3/files/${gFileId}?uploadType=media`,{method:'PATCH',headers:{'Authorization':'Bearer '+gToken,'Content-Type':'application/json'},body:json}); } else { const form=new FormData(); form.append('metadata',new Blob([JSON.stringify({name:G_FILE,mimeType:'application/json'})],{type:'application/json'})); form.append('file',new Blob([json],{type:'application/json'})); const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{'Authorization':'Bearer '+gToken},body:form}); const res=await r.json(); gFileId=res.id; } setSt('☁️ 저장 완료 ('+new Date().toLocaleTimeString('ko-KR')+')'); }catch(e){ setSt('저장 오류: '+e.message); } }
+async function gSave(silent=false){ if(!gToken){ setSt('먼저 로그인해주세요'); return; } if(!silent) setSt('저장 중…'); try{ const json=JSON.stringify({version:2,savedAt:new Date().toISOString(),words:WORDS,masterMap:MMAP,wrongSet:[...WSET],wrongLog:WLOG,streaks:STREAKS}); if(gFileId){ await fetch(`https://www.googleapis.com/upload/drive/v3/files/${gFileId}?uploadType=media`,{method:'PATCH',headers:{'Authorization':'Bearer '+gToken,'Content-Type':'application/json'},body:json}); } else { const form=new FormData(); form.append('metadata',new Blob([JSON.stringify({name:G_FILE,mimeType:'application/json'})],{type:'application/json'})); form.append('file',new Blob([json],{type:'application/json'})); const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{'Authorization':'Bearer '+gToken},body:form}); const res=await r.json(); gFileId=res.id; } setSt('☁️ '+(silent?'자동 ':'')+'저장 완료 ('+new Date().toLocaleTimeString('ko-KR')+')'); }catch(e){ setSt('저장 오류: '+e.message); } }
 async function gLoad(){ if(!gToken){ setSt('먼저 로그인해주세요'); return; } if(!gFileId) await findFile(); if(!gFileId){ setSt('저장된 파일이 없어요'); return; } setSt('불러오는 중…'); try{ const r=await fetch(`https://www.googleapis.com/drive/v3/files/${gFileId}?alt=media`,{headers:{'Authorization':'Bearer '+gToken}}); const data=await r.json(); if(!data||data.version!==2){ alert('파일 형식이 맞지 않아요.'); return; } if(!confirm('불러오면 현재 데이터가 덮어씌워져요. 계속할까요?')) return; WORDS=data.words||WORDS; MMAP=data.masterMap||{}; WSET=new Set(data.wrongSet||[]); WLOG=data.wrongLog||[]; STREAKS=data.streaks||{}; saveWords(WORDS); saveMaster(); saveWrong(); saveStreaks(); init(); setSt('📂 불러오기 완료!'); }catch(e){ setSt('불러오기 오류: '+e.message); } }
 
 // ══════════════════════════════════════════════
