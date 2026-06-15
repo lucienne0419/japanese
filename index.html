@@ -278,6 +278,23 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
           <option value="wrong">틀린 횟수 많은 순</option>
         </select>
       </div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--sub);font-weight:600;margin-bottom:7px;">앞면 표시 방식 (한자 있는 단어)</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="fc-show-kanji" checked style="accent-color:var(--blue);width:15px;height:15px;"> 한자로 표시
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="fc-show-kana" checked style="accent-color:var(--blue);width:15px;height:15px;"> 가나로 표시
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--sub);margin-top:5px;">※ 한자 없는 단어는 항상 가나로 표시</div>
+        <div style="margin-top:8px;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="fc-show-note" checked style="accent-color:var(--blue);width:15px;height:15px;"> 뒷면에 부가설명 표시
+          </label>
+        </div>
+      </div>
       <button class="btn btn-primary" style="width:100%" onclick="startFlash()">플래시카드 시작 →</button>
     </div>
     <div id="fc-screen" style="display:none">
@@ -1377,11 +1394,25 @@ function updateFCPool(){
 function startFlash(){
   const list=getFCList();
   if(!list.length){ alert('단어가 없어요.'); return; }
+
+  // 체크박스 설정 읽기
+  const showKanjiOpt = document.getElementById('fc-show-kanji').checked;
+  const showKanaOpt  = document.getElementById('fc-show-kana').checked;
+  const showNoteOpt  = document.getElementById('fc-show-note').checked;
+
+  // 둘 다 체크 안 됐으면 경고
+  if(!showKanjiOpt && !showKanaOpt){
+    alert('한자 또는 가나 중 하나 이상 선택해주세요.');
+    return;
+  }
+
   const order=document.getElementById('fc-order').value;
   let words=[...list];
   if(order==='random') words=shuffle(words);
   else if(order==='wrong') words=words.sort((a,b)=>b.wrongCount-a.wrongCount);
-  fcState={ words, idx:0, known:0, unknown:0, unknownWords:[] };
+
+  fcState={ words, idx:0, known:0, unknown:0, unknownWords:[],
+            showKanjiOpt, showKanaOpt, showNoteOpt };
   document.getElementById('fc-setup').style.display='none';
   document.getElementById('fc-result').style.display='none';
   document.getElementById('fc-screen').style.display='block';
@@ -1399,12 +1430,37 @@ function showFCCard(){
 
   function _update(){
     const w=fcState.words[fcState.idx];
-    const showKanji=!!w.kanji;
-    document.getElementById('fc-front-word').textContent=showKanji?w.kanji:w.kana;
-    document.getElementById('fc-front-kana').textContent=showKanji?w.kana:'';
+    const {showKanjiOpt, showKanaOpt, showNoteOpt} = fcState;
+    const hasKanji = !!w.kanji;
+
+    // 앞면 표시 방식 결정
+    let displayWord, displayKana;
+    if(!hasKanji){
+      // 한자 없는 단어: 항상 가나
+      displayWord = w.kana;
+      displayKana = '';
+    } else if(showKanjiOpt && showKanaOpt){
+      // 둘 다 체크: 50% 랜덤
+      const useKanji = Math.random() < 0.5;
+      displayWord = useKanji ? w.kanji : w.kana;
+      displayKana = useKanji ? w.kana : '';
+    } else if(showKanjiOpt){
+      // 한자만
+      displayWord = w.kanji;
+      displayKana = w.kana;
+    } else {
+      // 가나만
+      displayWord = w.kana;
+      displayKana = '';
+    }
+
+    document.getElementById('fc-front-word').textContent=displayWord;
+    document.getElementById('fc-front-kana').textContent=displayKana;
     document.getElementById('fc-back-mean').textContent=w.meaning;
     document.getElementById('fc-back-kana').textContent=w.kana;
-    document.getElementById('fc-back-note').textContent=w.note||'';
+    // 부가설명 표시 여부
+    const noteEl=document.getElementById('fc-back-note');
+    noteEl.textContent = (showNoteOpt && w.note) ? w.note : '';
     document.getElementById('fc-prog').textContent=`${fcState.idx+1} / ${fcState.words.length}  ✓${fcState.known}  ✗${fcState.unknown}`;
   }
 
