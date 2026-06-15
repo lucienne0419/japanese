@@ -124,6 +124,27 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
 #theme-modal-inner{background:#fff;border-radius:14px;padding:22px;width:90%;max-width:460px;max-height:80vh;overflow-y:auto;}
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:#ccc;border-radius:99px;}
+/* ── 플래시카드 ── */
+#fc-setup .pool-tabs{margin-bottom:10px;}
+.fc-wrap{perspective:1000px;width:100%;max-width:500px;margin:0 auto 20px;cursor:pointer;user-select:none;}
+.fc-inner{position:relative;width:100%;padding-top:56%;transition:transform .5s;transform-style:preserve-3d;}
+.fc-inner.flipped{transform:rotateY(180deg);}
+.fc-front,.fc-back{position:absolute;inset:0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;backface-visibility:hidden;}
+.fc-front{background:var(--card);border:2px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,.08);}
+.fc-back{background:linear-gradient(135deg,#1A1A2E,#2E3A6E);color:#fff;transform:rotateY(180deg);}
+.fc-kana{font-family:"Noto Sans JP",sans-serif;font-size:13px;color:var(--sub);margin-bottom:6px;}
+.fc-word{font-size:44px;font-weight:700;text-align:center;line-height:1.2;word-break:break-all;}
+.fc-sub{font-size:13px;color:rgba(255,255,255,.6);margin-top:8px;}
+.fc-hint{font-size:12px;color:var(--sub);text-align:center;margin-bottom:8px;}
+.fc-btns{display:flex;gap:12px;justify-content:center;}
+.fc-btn-no{background:#FEE2E2;color:var(--wrong);border:none;border-radius:12px;padding:14px 32px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .1s;}
+.fc-btn-yes{background:#D1FAE5;color:#065F46;border:none;border-radius:12px;padding:14px 32px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .1s;}
+.fc-btn-no:hover,.fc-btn-yes:hover{transform:scale(1.05);}
+.fc-btn-sound{background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;color:var(--sub);}
+.fc-btn-sound:hover{border-color:var(--blue);color:var(--blue);}
+.fc-prog{font-size:12px;color:var(--sub);text-align:center;margin-bottom:12px;}
+.fc-result-card{text-align:center;padding:20px 0;}
+
 </style>
 </head>
 <body>
@@ -148,8 +169,9 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
 <div id="main">
   <div id="tab-nav">
     <button class="tab-btn active" onclick="setTab('dict')">📖 단어장</button>
-    <button class="tab-btn" onclick="setTab('quiz')">📝 퀴즈</button>
-    <button class="tab-btn" onclick="setTab('edit')">✏️ 단어 편집</button>
+    <button class="tab-btn" onclick="setTab('flash')">🃏 플래시카드</button>
+    <button class="tab-btn" onclick="setTab('quiz')">✏️ 퀴즈</button>
+    <button class="tab-btn" onclick="setTab('edit')">⚙️ 단어 편집</button>
   </div>
 
   <!-- 단어장 -->
@@ -238,6 +260,62 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
       </div>
     </div>
   </div>
+
+  <!-- 플래시카드 -->
+  <div id="tab-flash" class="screen">
+    <div id="fc-setup" class="card">
+      <div class="pool-tabs">
+        <button class="ptab active" onclick="setFCPool('all')">전체</button>
+        <button class="ptab" onclick="setFCPool('wrong')">오답노트</button>
+      </div>
+      <div id="fc-theme-filter" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;"></div>
+      <div id="fc-pool-info" style="font-size:12px;color:var(--sub);margin-bottom:12px;"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <label style="font-size:13px;color:var(--sub)">순서</label>
+        <select id="fc-order" class="sort-sel">
+          <option value="random">랜덤</option>
+          <option value="order">입력 순</option>
+          <option value="wrong">틀린 횟수 많은 순</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="startFlash()">플래시카드 시작 →</button>
+    </div>
+    <div id="fc-screen" style="display:none">
+      <div class="fc-prog" id="fc-prog"></div>
+      <div class="fc-wrap" id="fc-wrap" onclick="flipCard()">
+        <div class="fc-inner" id="fc-inner">
+          <div class="fc-front">
+            <div class="fc-kana" id="fc-front-kana"></div>
+            <div class="fc-word" id="fc-front-word"></div>
+            <div class="fc-hint" id="fc-tap-hint">👆 탭하면 뜻이 보여요</div>
+          </div>
+          <div class="fc-back">
+            <div style="font-size:22px;font-weight:700;margin-bottom:6px;" id="fc-back-mean"></div>
+            <div class="fc-sub" id="fc-back-kana"></div>
+            <div class="fc-sub" id="fc-back-note"></div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-bottom:14px;">
+        <button class="fc-btn-sound" onclick="speakWord()">🔊 발음 듣기</button>
+      </div>
+      <div class="fc-btns" id="fc-btns" style="display:none">
+        <button class="fc-btn-no" onclick="fcAnswer(false)">✕ 몰라요</button>
+        <button class="fc-btn-yes" onclick="fcAnswer(true)">○ 알아요</button>
+      </div>
+    </div>
+    <div id="fc-result" style="display:none" class="card">
+      <div class="fc-result-card">
+        <div style="font-size:48px;margin-bottom:8px">🎉</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:4px">완료!</div>
+        <div id="fc-result-sub" style="font-size:14px;color:var(--sub);margin-bottom:16px"></div>
+        <div id="fc-result-retry" style="margin-bottom:12px"></div>
+        <button class="btn btn-primary" onclick="startFlash()" style="width:100%;margin-bottom:8px">다시 하기</button>
+        <button class="btn btn-ghost" onclick="backFCSetup()" style="width:100%">← 설정으로</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- 편집 -->
   <div id="tab-edit" class="screen">
@@ -437,444 +515,416 @@ const BASE_WORDS = [
   {id:147,kanji:"",kana:"どんぶり",meaning:"덮밥",note:"",theme:"음식·식사",addedAt:147,quizCount:0,wrongCount:0,streak:0},
   {id:148,kanji:"",kana:"おでん",meaning:"어묵탕",note:"",theme:"음식·식사",addedAt:148,quizCount:0,wrongCount:0,streak:0},
   {id:149,kanji:"",kana:"なっとう",meaning:"낫토",note:"",theme:"음식·식사",addedAt:149,quizCount:0,wrongCount:0,streak:0},
-  {id:150,kanji:"",kana:"じょうずだ",meaning:"잘하다",note:"",theme:"기초 표현",addedAt:150,quizCount:0,wrongCount:0,streak:0},
-  {id:151,kanji:"",kana:"すきだ",meaning:"좋아하다",note:"",theme:"기초 표현",addedAt:151,quizCount:0,wrongCount:0,streak:0},
-  {id:152,kanji:"",kana:"にぎやかだ",meaning:"번화하다, 떠들썩하다",note:"",theme:"기초 표현",addedAt:152,quizCount:0,wrongCount:0,streak:0},
-  {id:153,kanji:"",kana:"すてきだ",meaning:"멋지다",note:"",theme:"기초 표현",addedAt:153,quizCount:0,wrongCount:0,streak:0},
-  {id:154,kanji:"",kana:"その",meaning:"그",note:"",theme:"기초 표현",addedAt:154,quizCount:0,wrongCount:0,streak:0},
-  {id:155,kanji:"",kana:"ネクタイ",meaning:"넥타이",note:"",theme:"기초 표현",addedAt:155,quizCount:0,wrongCount:0,streak:0},
-  {id:156,kanji:"",kana:"いいえ",meaning:"아니요",note:"",theme:"기초 표현",addedAt:156,quizCount:0,wrongCount:0,streak:0},
-  {id:157,kanji:"",kana:"まだまだ",meaning:"아직, 아직도",note:"",theme:"기초 표현",addedAt:157,quizCount:0,wrongCount:0,streak:0},
-  {id:158,kanji:"",kana:"そんなことありませんよ",meaning:"그렇지 않습니다",note:"",theme:"기초 표현",addedAt:158,quizCount:0,wrongCount:0,streak:0},
-  {id:159,kanji:"",kana:"スポーツ",meaning:"스포츠, 운동",note:"",theme:"기초 표현",addedAt:159,quizCount:0,wrongCount:0,streak:0},
-  {id:160,kanji:"",kana:"くだもの",meaning:"과일",note:"",theme:"기초 표현",addedAt:160,quizCount:0,wrongCount:0,streak:0},
-  {id:161,kanji:"",kana:"どうぶつ",meaning:"동물",note:"",theme:"기초 표현",addedAt:161,quizCount:0,wrongCount:0,streak:0},
-  {id:162,kanji:"",kana:"とり",meaning:"새",note:"",theme:"기초 표현",addedAt:162,quizCount:0,wrongCount:0,streak:0},
-  {id:163,kanji:"",kana:"しあい",meaning:"경기",note:"",theme:"기초 표현",addedAt:163,quizCount:0,wrongCount:0,streak:0},
-  {id:164,kanji:"",kana:"がんばってください",meaning:"힘내세요",note:"",theme:"기초 표현",addedAt:164,quizCount:0,wrongCount:0,streak:0},
-  {id:165,kanji:"お祭り",kana:"おまつり",meaning:"마쓰리, 축제",note:"",theme:"공휴일",addedAt:165,quizCount:0,wrongCount:0,streak:0},
-  {id:166,kanji:"",kana:"いつ",meaning:"언제",note:"",theme:"기초 표현",addedAt:166,quizCount:0,wrongCount:0,streak:0},
-  {id:167,kanji:"",kana:"たのしみ",meaning:"기대됨",note:"",theme:"기초 표현",addedAt:167,quizCount:0,wrongCount:0,streak:0},
-  {id:168,kanji:"体育祭",kana:"たいいくさい",meaning:"체육대회",note:"",theme:"교과목",addedAt:168,quizCount:0,wrongCount:0,streak:0},
-  {id:169,kanji:"",kana:"はなびたいかい",meaning:"불꽃놀이",note:"",theme:"기초 표현",addedAt:169,quizCount:0,wrongCount:0,streak:0},
-  {id:170,kanji:"",kana:"もうすぐ",meaning:"이제 곧",note:"",theme:"기초 표현",addedAt:170,quizCount:0,wrongCount:0,streak:0},
-  {id:171,kanji:"",kana:"おみこし",meaning:"미코시",note:"",theme:"기초 표현",addedAt:171,quizCount:0,wrongCount:0,streak:0},
-  {id:172,kanji:"",kana:"ゆかた",meaning:"유카타",note:"",theme:"기초 표현",addedAt:172,quizCount:0,wrongCount:0,streak:0},
-  {id:173,kanji:"",kana:"かわいい",meaning:"귀엽다",note:"",theme:"기초 표현",addedAt:173,quizCount:0,wrongCount:0,streak:0},
-  {id:174,kanji:"",kana:"それ",meaning:"그것",note:"",theme:"기초 표현",addedAt:174,quizCount:0,wrongCount:0,streak:0},
-  {id:175,kanji:"",kana:"わあ",meaning:"와",note:"",theme:"기초 표현",addedAt:175,quizCount:0,wrongCount:0,streak:0},
-  {id:176,kanji:"",kana:"かっこいい",meaning:"멋있다",note:"",theme:"기초 표현",addedAt:176,quizCount:0,wrongCount:0,streak:0},
-  {id:177,kanji:"",kana:"おめでとうございます",meaning:"축하합니다",note:"",theme:"기초 표현",addedAt:177,quizCount:0,wrongCount:0,streak:0},
-  {id:178,kanji:"",kana:"たんじょうび",meaning:"생일",note:"",theme:"기초 표현",addedAt:178,quizCount:0,wrongCount:0,streak:0},
-  {id:179,kanji:"",kana:"パーティー",meaning:"파티",note:"",theme:"기초 표현",addedAt:179,quizCount:0,wrongCount:0,streak:0},
-  {id:180,kanji:"",kana:"あした",meaning:"내일",note:"",theme:"기초 표현",addedAt:180,quizCount:0,wrongCount:0,streak:0},
-  {id:181,kanji:"",kana:"ジェイポップ",meaning:"일본 가요",note:"",theme:"기초 표현",addedAt:181,quizCount:0,wrongCount:0,streak:0},
-  {id:182,kanji:"",kana:"アニメ",meaning:"애니메이션",note:"",theme:"기초 표현",addedAt:182,quizCount:0,wrongCount:0,streak:0},
-  {id:183,kanji:"",kana:"やたい",meaning:"야타이",note:"",theme:"기초 표현",addedAt:183,quizCount:0,wrongCount:0,streak:0},
-  {id:184,kanji:"",kana:"げた",meaning:"게다",note:"",theme:"기초 표현",addedAt:184,quizCount:0,wrongCount:0,streak:0},
-  {id:185,kanji:"",kana:"きもの",meaning:"기모노",note:"",theme:"기초 표현",addedAt:185,quizCount:0,wrongCount:0,streak:0},
-  {id:186,kanji:"",kana:"ぞうり",meaning:"조리",note:"",theme:"기초 표현",addedAt:186,quizCount:0,wrongCount:0,streak:0},
-  {id:187,kanji:"",kana:"ついたち",meaning:"1일",note:"",theme:"날짜",addedAt:187,quizCount:0,wrongCount:0,streak:0},
-  {id:188,kanji:"",kana:"ふつか",meaning:"2일",note:"",theme:"날짜",addedAt:188,quizCount:0,wrongCount:0,streak:0},
-  {id:189,kanji:"",kana:"みっか",meaning:"3일",note:"",theme:"날짜",addedAt:189,quizCount:0,wrongCount:0,streak:0},
-  {id:190,kanji:"",kana:"よっか",meaning:"4일",note:"",theme:"날짜",addedAt:190,quizCount:0,wrongCount:0,streak:0},
-  {id:191,kanji:"",kana:"いつか",meaning:"5일",note:"",theme:"날짜",addedAt:191,quizCount:0,wrongCount:0,streak:0},
-  {id:192,kanji:"",kana:"むいか",meaning:"6일",note:"",theme:"날짜",addedAt:192,quizCount:0,wrongCount:0,streak:0},
-  {id:193,kanji:"",kana:"なのか",meaning:"7일",note:"",theme:"날짜",addedAt:193,quizCount:0,wrongCount:0,streak:0},
-  {id:194,kanji:"",kana:"ようか",meaning:"8일",note:"",theme:"날짜",addedAt:194,quizCount:0,wrongCount:0,streak:0},
-  {id:195,kanji:"",kana:"ここのか",meaning:"9일",note:"",theme:"날짜",addedAt:195,quizCount:0,wrongCount:0,streak:0},
-  {id:196,kanji:"",kana:"とおか",meaning:"10일",note:"",theme:"날짜",addedAt:196,quizCount:0,wrongCount:0,streak:0},
-  {id:197,kanji:"",kana:"-にち",meaning:"-일",note:"",theme:"날짜",addedAt:197,quizCount:0,wrongCount:0,streak:0},
-  {id:198,kanji:"",kana:"はつか",meaning:"20일",note:"",theme:"날짜",addedAt:198,quizCount:0,wrongCount:0,streak:0},
-  {id:199,kanji:"英語表現",kana:"えいごひょうげん",meaning:"영어표현",note:"",theme:"교과목",addedAt:199,quizCount:0,wrongCount:0,streak:0},
-  {id:200,kanji:"国語総合",kana:"こくごそうごう",meaning:"국어 종합",note:"",theme:"교과목",addedAt:200,quizCount:0,wrongCount:0,streak:0},
-  {id:201,kanji:"地学基礎",kana:"ちがくきそ",meaning:"지학 기초",note:"",theme:"교과목",addedAt:201,quizCount:0,wrongCount:0,streak:0},
-  {id:202,kanji:"情報科学",kana:"じょうほうかがく",meaning:"정보 과학",note:"",theme:"교과목",addedAt:202,quizCount:0,wrongCount:0,streak:0},
-  {id:203,kanji:"漢字",kana:"かんじ",meaning:"한자",note:"",theme:"교과목",addedAt:203,quizCount:0,wrongCount:0,streak:0},
-  {id:204,kanji:"地理",kana:"ちり",meaning:"지리",note:"",theme:"교과목",addedAt:204,quizCount:0,wrongCount:0,streak:0},
-  {id:205,kanji:"体育",kana:"たいいく",meaning:"체육",note:"",theme:"교과목",addedAt:205,quizCount:0,wrongCount:0,streak:0},
-  {id:206,kanji:"日本史",kana:"にほんし",meaning:"일본사",note:"",theme:"교과목",addedAt:206,quizCount:0,wrongCount:0,streak:0},
-  {id:207,kanji:"時間割",kana:"じかんわり",meaning:"시간표",note:"",theme:"교과목",addedAt:207,quizCount:0,wrongCount:0,streak:0},
-  {id:208,kanji:"数学",kana:"すうがく",meaning:"수학",note:"",theme:"교과목",addedAt:208,quizCount:0,wrongCount:0,streak:0},
-  {id:209,kanji:"理科",kana:"りか",meaning:"이과",note:"",theme:"교과목",addedAt:209,quizCount:0,wrongCount:0,streak:0},
-  {id:210,kanji:"芸術",kana:"げいじゅつ",meaning:"예술",note:"",theme:"교과목",addedAt:210,quizCount:0,wrongCount:0,streak:0},
-  {id:211,kanji:"生物基礎",kana:"せいぶつきそ",meaning:"생물 기초",note:"",theme:"교과목",addedAt:211,quizCount:0,wrongCount:0,streak:0},
-  {id:212,kanji:"保健",kana:"ほけん",meaning:"보건",note:"",theme:"교과목",addedAt:212,quizCount:0,wrongCount:0,streak:0},
-  {id:213,kanji:"音楽を聞くこと",kana:"おんがくをきくこと",meaning:"음악 듣기",note:"",theme:"취미",addedAt:213,quizCount:0,wrongCount:0,streak:0},
-  {id:214,kanji:"映画を見ること",kana:"えいがをみること",meaning:"영화 보기",note:"",theme:"취미",addedAt:214,quizCount:0,wrongCount:0,streak:0},
-  {id:215,kanji:"アニメを見ること",kana:"あにめをみること",meaning:"애니 보기",note:"",theme:"취미",addedAt:215,quizCount:0,wrongCount:0,streak:0},
-  {id:216,kanji:"",kana:"げーむをすること",meaning:"게임하기",note:"",theme:"취미",addedAt:216,quizCount:0,wrongCount:0,streak:0},
-  {id:217,kanji:"漫画を読むこと",kana:"まんがをよむこと",meaning:"만화 읽기",note:"",theme:"취미",addedAt:217,quizCount:0,wrongCount:0,streak:0},
-  {id:218,kanji:"",kana:"ダンス",meaning:"댄스",note:"",theme:"취미",addedAt:218,quizCount:0,wrongCount:0,streak:0},
-  {id:219,kanji:"",kana:"カラオケ",meaning:"노래방",note:"",theme:"취미",addedAt:219,quizCount:0,wrongCount:0,streak:0},
-  {id:220,kanji:"写真を撮ること",kana:"しゃしんをとること",meaning:"사진 찍기",note:"",theme:"취미",addedAt:220,quizCount:0,wrongCount:0,streak:0},
-  {id:221,kanji:"料理",kana:"りょうり",meaning:"요리",note:"",theme:"취미",addedAt:221,quizCount:0,wrongCount:0,streak:0},
-  {id:222,kanji:"ピアノを弾くこと",kana:"ぴあのをひくこと",meaning:"피아노 치기",note:"",theme:"취미",addedAt:222,quizCount:0,wrongCount:0,streak:0},
-  {id:223,kanji:"読書",kana:"どくしょ",meaning:"독서",note:"",theme:"취미",addedAt:223,quizCount:0,wrongCount:0,streak:0},
-  {id:224,kanji:"動画を見ること",kana:"どうがをみること",meaning:"영상 보기",note:"",theme:"취미",addedAt:224,quizCount:0,wrongCount:0,streak:0},
-  {id:225,kanji:"SNSを見ること",kana:"えすえぬえすをみること",meaning:"SNS 보기",note:"",theme:"취미",addedAt:225,quizCount:0,wrongCount:0,streak:0},
-  {id:226,kanji:"寝ること",kana:"ねること",meaning:"자는 것",note:"",theme:"취미",addedAt:226,quizCount:0,wrongCount:0,streak:0},
-  {id:227,kanji:"元日",kana:"がんじつ",meaning:"새해 원일 (1/1)",note:"",theme:"공휴일",addedAt:227,quizCount:0,wrongCount:0,streak:0},
-  {id:228,kanji:"成人の日",kana:"せいじんのひ",meaning:"성인의 날",note:"",theme:"공휴일",addedAt:228,quizCount:0,wrongCount:0,streak:0},
-  {id:229,kanji:"建国記念日",kana:"けんこくきねんび",meaning:"건국기념일",note:"",theme:"공휴일",addedAt:229,quizCount:0,wrongCount:0,streak:0},
-  {id:230,kanji:"天皇誕生日",kana:"てんのうたんじょうび",meaning:"천황탄생일",note:"",theme:"공휴일",addedAt:230,quizCount:0,wrongCount:0,streak:0},
-  {id:231,kanji:"春分",kana:"しゅんぶん",meaning:"춘분",note:"",theme:"공휴일",addedAt:231,quizCount:0,wrongCount:0,streak:0},
-  {id:232,kanji:"昭和の日",kana:"しょうわのひ",meaning:"쇼와의 날",note:"",theme:"공휴일",addedAt:232,quizCount:0,wrongCount:0,streak:0},
-  {id:233,kanji:"憲法記念日",kana:"けんぽうきねんび",meaning:"헌법기념일",note:"",theme:"공휴일",addedAt:233,quizCount:0,wrongCount:0,streak:0},
-  {id:234,kanji:"みどりの日",kana:"みどりのひ",meaning:"녹색의 날",note:"",theme:"공휴일",addedAt:234,quizCount:0,wrongCount:0,streak:0},
-  {id:235,kanji:"子供の日",kana:"こどものひ",meaning:"어린이날",note:"",theme:"공휴일",addedAt:235,quizCount:0,wrongCount:0,streak:0},
-  {id:236,kanji:"海の日",kana:"うみのひ",meaning:"바다의 날",note:"",theme:"공휴일",addedAt:236,quizCount:0,wrongCount:0,streak:0},
-  {id:237,kanji:"山の日",kana:"やまのひ",meaning:"산의 날",note:"",theme:"공휴일",addedAt:237,quizCount:0,wrongCount:0,streak:0},
-  {id:238,kanji:"敬老の日",kana:"けいろうのひ",meaning:"경로의 날",note:"",theme:"공휴일",addedAt:238,quizCount:0,wrongCount:0,streak:0},
-  {id:239,kanji:"秋分の日",kana:"しゅうぶんのひ",meaning:"추분",note:"",theme:"공휴일",addedAt:239,quizCount:0,wrongCount:0,streak:0},
-  {id:240,kanji:"スポーツの日",kana:"すぽーつのひ",meaning:"스포츠의 날",note:"",theme:"공휴일",addedAt:240,quizCount:0,wrongCount:0,streak:0},
-  {id:241,kanji:"文化の日",kana:"ぶんかのひ",meaning:"문화의 날",note:"",theme:"공휴일",addedAt:241,quizCount:0,wrongCount:0,streak:0},
-  {id:242,kanji:"勤労感謝の日",kana:"きんろうかんしゃのひ",meaning:"근로감사의 날",note:"",theme:"공휴일",addedAt:242,quizCount:0,wrongCount:0,streak:0},
-  {id:243,kanji:"入学式",kana:"にゅうがくしき",meaning:"입학식",note:"",theme:"학교행사",addedAt:243,quizCount:0,wrongCount:0,streak:0},
-  {id:244,kanji:"遠足",kana:"えんそく",meaning:"소풍",note:"",theme:"학교행사",addedAt:244,quizCount:0,wrongCount:0,streak:0},
-  {id:245,kanji:"試験・終業式",kana:"しけん・しゅうぎょうしき",meaning:"시험 및 종업식",note:"",theme:"학교생활",addedAt:245,quizCount:0,wrongCount:0,streak:0},
-  {id:246,kanji:"夏休み",kana:"なつやすみ",meaning:"여름방학",note:"",theme:"학교행사",addedAt:246,quizCount:0,wrongCount:0,streak:0},
-  {id:247,kanji:"部活動合宿",kana:"ぶかつどうがっしゅく",meaning:"부활동 합숙",note:"",theme:"학교행사",addedAt:247,quizCount:0,wrongCount:0,streak:0},
-  {id:248,kanji:"始業式・文化祭",kana:"しぎょうしき・ぶんかさい",meaning:"개학・학교축제",note:"",theme:"학교행사",addedAt:248,quizCount:0,wrongCount:0,streak:0},
-  {id:249,kanji:"進路説明会",kana:"しんろせつめいかい",meaning:"진로설명회",note:"",theme:"학교생활",addedAt:249,quizCount:0,wrongCount:0,streak:0},
-  {id:250,kanji:"修学旅行",kana:"しゅうがくりょこう",meaning:"수학여행",note:"",theme:"교과목",addedAt:250,quizCount:0,wrongCount:0,streak:0},
-  {id:251,kanji:"期末試験",kana:"きまつしけん",meaning:"기말고사, 겨울방학",note:"",theme:"학교행사",addedAt:251,quizCount:0,wrongCount:0,streak:0},
-  {id:252,kanji:"マラソン大会",kana:"まらそんたいかい",meaning:"마라톤",note:"",theme:"학교행사",addedAt:252,quizCount:0,wrongCount:0,streak:0},
-  {id:253,kanji:"卒業式",kana:"そつぎょうしき",meaning:"졸업식 및 봄방학",note:"",theme:"학교행사",addedAt:253,quizCount:0,wrongCount:0,streak:0},
-  {id:254,kanji:"春休み",kana:"はるやすみ",meaning:"봄방학",note:"",theme:"학교행사",addedAt:254,quizCount:0,wrongCount:0,streak:0},
-  {id:255,kanji:"サッカー部",kana:"さっかーぶ",meaning:"축구부",note:"",theme:"동아리",addedAt:255,quizCount:0,wrongCount:0,streak:0},
-  {id:256,kanji:"野球部",kana:"やきゅうぶ",meaning:"야구부",note:"",theme:"동아리",addedAt:256,quizCount:0,wrongCount:0,streak:0},
-  {id:257,kanji:"テニス部",kana:"てにすぶ",meaning:"테니스부",note:"",theme:"동아리",addedAt:257,quizCount:0,wrongCount:0,streak:0},
-  {id:258,kanji:"水泳部",kana:"すいえいぶ",meaning:"수영부",note:"",theme:"동아리",addedAt:258,quizCount:0,wrongCount:0,streak:0},
-  {id:259,kanji:"弓道部",kana:"きゅうどうぶ",meaning:"궁도부",note:"",theme:"동아리",addedAt:259,quizCount:0,wrongCount:0,streak:0},
-  {id:260,kanji:"剣道部",kana:"けんどうぶ",meaning:"검도부",note:"",theme:"동아리",addedAt:260,quizCount:0,wrongCount:0,streak:0},
-  {id:261,kanji:"吹奏楽部",kana:"すいそうがくぶ",meaning:"취주악부",note:"",theme:"동아리",addedAt:261,quizCount:0,wrongCount:0,streak:0},
-  {id:262,kanji:"書道部",kana:"しょどうぶ",meaning:"서예부",note:"",theme:"동아리",addedAt:262,quizCount:0,wrongCount:0,streak:0},
-  {id:263,kanji:"茶道部",kana:"さどうぶ",meaning:"다도부",note:"",theme:"동아리",addedAt:263,quizCount:0,wrongCount:0,streak:0},
-  {id:264,kanji:"帰宅部",kana:"きたくぶ",meaning:"귀가부(동아리 없음)",note:"",theme:"동아리",addedAt:264,quizCount:0,wrongCount:0,streak:0},
-  {id:265,kanji:"華道部",kana:"かどうぶ",meaning:"화도부",note:"",theme:"동아리",addedAt:265,quizCount:0,wrongCount:0,streak:0},
-  {id:266,kanji:"競技かるた部",kana:"きょうぎかるたぶ",meaning:"경기 카루타부",note:"",theme:"동아리",addedAt:266,quizCount:0,wrongCount:0,streak:0},
-  {id:267,kanji:"和太鼓部",kana:"わだいこぶ",meaning:"일본 북 동아리",note:"",theme:"동아리",addedAt:267,quizCount:0,wrongCount:0,streak:0},
-  {id:268,kanji:"鉄道研究部",kana:"てつどうけんきゅうぶ",meaning:"철도연구부",note:"",theme:"동아리",addedAt:268,quizCount:0,wrongCount:0,streak:0},
-  {id:269,kanji:"漫画研究部",kana:"まんがけんきゅうぶ",meaning:"만화연구부",note:"",theme:"동아리",addedAt:269,quizCount:0,wrongCount:0,streak:0},
-  {id:270,kanji:"高校生",kana:"こうこうせい",meaning:"고등학생",note:"",theme:"학교생활",addedAt:270,quizCount:0,wrongCount:0,streak:0},
-  {id:271,kanji:"制服",kana:"せいふく",meaning:"교복",note:"",theme:"학교생활",addedAt:271,quizCount:0,wrongCount:0,streak:0},
-  {id:272,kanji:"校則",kana:"こうそく",meaning:"교칙",note:"",theme:"학교생활",addedAt:272,quizCount:0,wrongCount:0,streak:0},
-  {id:273,kanji:"お弁当",kana:"おべんとう",meaning:"도시락",note:"",theme:"학교생활",addedAt:273,quizCount:0,wrongCount:0,streak:0},
-  {id:274,kanji:"売店",kana:"ばいてん",meaning:"매점",note:"",theme:"학교생활",addedAt:274,quizCount:0,wrongCount:0,streak:0},
-  {id:275,kanji:"後輩",kana:"こうはい",meaning:"후배",note:"",theme:"학교생활",addedAt:275,quizCount:0,wrongCount:0,streak:0},
-  {id:276,kanji:"先輩",kana:"せんぱい",meaning:"선배",note:"",theme:"학교생활",addedAt:276,quizCount:0,wrongCount:0,streak:0},
-  {id:277,kanji:"進路",kana:"しんろ",meaning:"진로",note:"",theme:"학교생활",addedAt:277,quizCount:0,wrongCount:0,streak:0},
-  {id:278,kanji:"受験",kana:"じゅけん",meaning:"수험",note:"",theme:"학교생활",addedAt:278,quizCount:0,wrongCount:0,streak:0},
-  {id:279,kanji:"成績",kana:"せいせき",meaning:"성적",note:"",theme:"학교생활",addedAt:279,quizCount:0,wrongCount:0,streak:0},
-  {id:280,kanji:"試験",kana:"しけん",meaning:"시험",note:"",theme:"학교생활",addedAt:280,quizCount:0,wrongCount:0,streak:0},
-  {id:281,kanji:"放課後",kana:"ほうかご",meaning:"방과 후",note:"",theme:"학교생활",addedAt:281,quizCount:0,wrongCount:0,streak:0},
-  {id:282,kanji:"遅刻",kana:"ちこく",meaning:"지각",note:"",theme:"학교생활",addedAt:282,quizCount:0,wrongCount:0,streak:0},
-  {id:283,kanji:"欠席",kana:"けっせき",meaning:"결석",note:"",theme:"학교생활",addedAt:283,quizCount:0,wrongCount:0,streak:0},
-  {id:284,kanji:"出席",kana:"しゅっせき",meaning:"출석",note:"",theme:"학교생활",addedAt:284,quizCount:0,wrongCount:0,streak:0},
-  {id:285,kanji:"登校",kana:"とうこう",meaning:"등교",note:"",theme:"학교생활",addedAt:285,quizCount:0,wrongCount:0,streak:0},
-  {id:286,kanji:"下校",kana:"げこう",meaning:"하교",note:"",theme:"학교생활",addedAt:286,quizCount:0,wrongCount:0,streak:0},
-  {id:287,kanji:"",kana:"さとう",meaning:"설탕",note:"",theme:"음식·식사",addedAt:287,quizCount:0,wrongCount:0,streak:0},
-  {id:288,kanji:"",kana:"しお",meaning:"소금",note:"",theme:"음식·식사",addedAt:288,quizCount:0,wrongCount:0,streak:0},
-  {id:289,kanji:"",kana:"す",meaning:"식초",note:"",theme:"음식·식사",addedAt:289,quizCount:0,wrongCount:0,streak:0},
-  {id:290,kanji:"",kana:"みそ",meaning:"된장",note:"",theme:"음식·식사",addedAt:290,quizCount:0,wrongCount:0,streak:0},
-  {id:291,kanji:"",kana:"はしのまなー",meaning:"젓가락 예절",note:"",theme:"음식·식사",addedAt:291,quizCount:0,wrongCount:0,streak:0},
-  {id:292,kanji:"小皿",kana:"こざら",meaning:"작은 접시",note:"",theme:"음식·식사",addedAt:292,quizCount:0,wrongCount:0,streak:0},
-  {id:293,kanji:"取り皿",kana:"とりざら",meaning:"덜어 먹는 접시",note:"",theme:"음식·식사",addedAt:293,quizCount:0,wrongCount:0,streak:0},
-  {id:294,kanji:"",kana:"いただきます",meaning:"잘 먹겠습니다",note:"",theme:"음식·식사",addedAt:294,quizCount:0,wrongCount:0,streak:0},
-  {id:295,kanji:"",kana:"ごちそうさまでした",meaning:"잘 먹었습니다",note:"",theme:"음식·식사",addedAt:295,quizCount:0,wrongCount:0,streak:0},
-  {id:296,kanji:"味噌汁",kana:"みそしる",meaning:"된장국",note:"",theme:"음식·식사",addedAt:296,quizCount:0,wrongCount:0,streak:0},
-  {id:297,kanji:"お代わり",kana:"おかわり",meaning:"리필, 한 그릇 더",note:"",theme:"음식·식사",addedAt:297,quizCount:0,wrongCount:0,streak:0},
-  {id:298,kanji:"",kana:"わたしばし",meaning:"젓가락 금기(가로 걸치기)",note:"",theme:"음식·식사",addedAt:298,quizCount:0,wrongCount:0,streak:0},
-  {id:299,kanji:"",kana:"なみだばし",meaning:"젓가락 금기(음식 떨어뜨리기)",note:"",theme:"음식·식사",addedAt:299,quizCount:0,wrongCount:0,streak:0},
-  {id:300,kanji:"",kana:"さしばし",meaning:"젓가락 금기(음식 찌르기)",note:"",theme:"음식·식사",addedAt:300,quizCount:0,wrongCount:0,streak:0},
-  {id:301,kanji:"",kana:"ねぶりばし",meaning:"젓가락 금기(핥기)",note:"",theme:"음식·식사",addedAt:301,quizCount:0,wrongCount:0,streak:0},
-  {id:302,kanji:"",kana:"つきばし",meaning:"젓가락 금기(그릇 옮기기)",note:"",theme:"음식·식사",addedAt:302,quizCount:0,wrongCount:0,streak:0},
-  {id:303,kanji:"",kana:"たてばし",meaning:"젓가락 금기(밥에 세우기)",note:"",theme:"음식·식사",addedAt:303,quizCount:0,wrongCount:0,streak:0},
-  {id:304,kanji:"",kana:"まわしばし",meaning:"젓가락 금기(나눠 먹기)",note:"",theme:"음식·식사",addedAt:304,quizCount:0,wrongCount:0,streak:0},
-  {id:305,kanji:"",kana:"よせばし",meaning:"젓가락 금기(그릇 당기기)",note:"",theme:"음식·식사",addedAt:305,quizCount:0,wrongCount:0,streak:0},
-  {id:306,kanji:"",kana:"ふりばし",meaning:"젓가락 금기(음식 털기)",note:"",theme:"음식·식사",addedAt:306,quizCount:0,wrongCount:0,streak:0},
-  {id:307,kanji:"",kana:"もぎばし",meaning:"젓가락 금기(밥알 떼기)",note:"",theme:"음식·식사",addedAt:307,quizCount:0,wrongCount:0,streak:0},
-  {id:308,kanji:"握り寿司",kana:"にぎりずし",meaning:"손으로 쥐어 만든 스시",note:"",theme:"음식·식사",addedAt:308,quizCount:0,wrongCount:0,streak:0},
-  {id:309,kanji:"稲荷寿司",kana:"いなりずし",meaning:"유부초밥",note:"",theme:"음식·식사",addedAt:309,quizCount:0,wrongCount:0,streak:0},
-  {id:310,kanji:"押し寿司",kana:"おしずし",meaning:"눌러서 만든 스시 (大阪 유명)",note:"",theme:"음식·식사",addedAt:310,quizCount:0,wrongCount:0,streak:0},
-  {id:311,kanji:"釜あげうどん",kana:"かまあげうどん",meaning:"삶은 우동 그대로 국물에 담가서 먹는 우동",note:"",theme:"음식·식사",addedAt:311,quizCount:0,wrongCount:0,streak:0},
-  {id:312,kanji:"",kana:"にこみうどん",meaning:"니코미 우동",note:"",theme:"음식·식사",addedAt:312,quizCount:0,wrongCount:0,streak:0},
-  {id:313,kanji:"",kana:"ひやしうどん",meaning:"히야시 우동 (냉우동)",note:"",theme:"음식·식사",addedAt:313,quizCount:0,wrongCount:0,streak:0},
-  {id:314,kanji:"",kana:"やきうどん",meaning:"야키 우동 (볶음우동)",note:"",theme:"음식·식사",addedAt:314,quizCount:0,wrongCount:0,streak:0},
-  {id:315,kanji:"",kana:"きつねうどん",meaning:"키쓰네 우동 (유부우동)",note:"",theme:"음식·식사",addedAt:315,quizCount:0,wrongCount:0,streak:0},
-  {id:316,kanji:"",kana:"たぬきうどん",meaning:"타누키 우동 (튀김 부스러기 우동)",note:"",theme:"음식·식사",addedAt:316,quizCount:0,wrongCount:0,streak:0},
-  {id:317,kanji:"",kana:"つきみうどん",meaning:"쓰키미 우동 (달걀 우동)",note:"",theme:"음식·식사",addedAt:317,quizCount:0,wrongCount:0,streak:0},
-  {id:318,kanji:"",kana:"ぎゅうどん",meaning:"규동 (소고기 덮밥)",note:"",theme:"음식·식사",addedAt:318,quizCount:0,wrongCount:0,streak:0},
-  {id:319,kanji:"",kana:"おやこどん",meaning:"오야코동 (닭고기·달걀 덮밥)",note:"",theme:"음식·식사",addedAt:319,quizCount:0,wrongCount:0,streak:0},
-  {id:320,kanji:"",kana:"てんどん",meaning:"텐동 (튀김 덮밥)",note:"",theme:"음식·식사",addedAt:320,quizCount:0,wrongCount:0,streak:0},
-  {id:321,kanji:"",kana:"てっかどん",meaning:"텟카동 (참치 덮밥)",note:"",theme:"음식·식사",addedAt:321,quizCount:0,wrongCount:0,streak:0},
-  {id:322,kanji:"",kana:"かつどん",meaning:"카쓰동 (돈가스 덮밥)",note:"",theme:"음식·식사",addedAt:322,quizCount:0,wrongCount:0,streak:0},
-  {id:323,kanji:"",kana:"たにんどん",meaning:"타닌동 (소고기·달걀 덮밥)",note:"",theme:"음식·식사",addedAt:323,quizCount:0,wrongCount:0,streak:0},
-  {id:324,kanji:"",kana:"ちゅうかどん",meaning:"쥬카동 (중국풍 덮밥)",note:"",theme:"음식·식사",addedAt:324,quizCount:0,wrongCount:0,streak:0},
-  {id:325,kanji:"",kana:"いくらどん",meaning:"이쿠라동 (연어알 덮밥)",note:"",theme:"음식·식사",addedAt:325,quizCount:0,wrongCount:0,streak:0},
-  {id:326,kanji:"",kana:"しおらーめん",meaning:"시오 라멘 (소금 라멘)",note:"",theme:"음식·식사",addedAt:326,quizCount:0,wrongCount:0,streak:0},
-  {id:327,kanji:"",kana:"しょうゆらーめん",meaning:"쇼유 라멘 (간장 라멘)",note:"",theme:"음식·식사",addedAt:327,quizCount:0,wrongCount:0,streak:0},
-  {id:328,kanji:"",kana:"みそらーめん",meaning:"미소 라멘 (된장 라멘)",note:"",theme:"음식·식사",addedAt:328,quizCount:0,wrongCount:0,streak:0},
-  {id:329,kanji:"",kana:"とんこつらーめん",meaning:"돈코쓰 라멘 (돼지뼈 라멘)",note:"",theme:"음식·식사",addedAt:329,quizCount:0,wrongCount:0,streak:0},
-  {id:330,kanji:"",kana:"えん",meaning:"엔 (일본 화폐 단위)",note:"",theme:"화폐·쇼핑",addedAt:330,quizCount:0,wrongCount:0,streak:0},
-  {id:331,kanji:"",kana:"いくらですか",meaning:"얼마예요?",note:"",theme:"화폐·쇼핑",addedAt:331,quizCount:0,wrongCount:0,streak:0},
-  {id:332,kanji:"",kana:"〜えんです",meaning:"〜엔이에요",note:"",theme:"화폐·쇼핑",addedAt:332,quizCount:0,wrongCount:0,streak:0},
-  {id:333,kanji:"お釣り",kana:"おつり",meaning:"거스름돈",note:"",theme:"화폐·쇼핑",addedAt:333,quizCount:0,wrongCount:0,streak:0},
-  {id:334,kanji:"",kana:"ぜんぶで",meaning:"전부 합쳐서",note:"",theme:"화폐·쇼핑",addedAt:334,quizCount:0,wrongCount:0,streak:0},
-  {id:335,kanji:"財布",kana:"さいふ",meaning:"지갑",note:"",theme:"화폐·쇼핑",addedAt:335,quizCount:0,wrongCount:0,streak:0},
-  {id:336,kanji:"",kana:"しょうひぜい",meaning:"소비세",note:"",theme:"화폐·쇼핑",addedAt:336,quizCount:0,wrongCount:0,streak:0},
-  {id:337,kanji:"",kana:"いち",meaning:"1",note:"",theme:"숫자",addedAt:337,quizCount:0,wrongCount:0,streak:0},
-  {id:338,kanji:"",kana:"に",meaning:"2",note:"",theme:"숫자",addedAt:338,quizCount:0,wrongCount:0,streak:0},
-  {id:339,kanji:"",kana:"さん",meaning:"3",note:"",theme:"숫자",addedAt:339,quizCount:0,wrongCount:0,streak:0},
-  {id:340,kanji:"",kana:"よん",meaning:"4",note:"",theme:"숫자",addedAt:340,quizCount:0,wrongCount:0,streak:0},
-  {id:341,kanji:"",kana:"ご",meaning:"5",note:"",theme:"숫자",addedAt:341,quizCount:0,wrongCount:0,streak:0},
-  {id:342,kanji:"",kana:"ろく",meaning:"6",note:"",theme:"숫자",addedAt:342,quizCount:0,wrongCount:0,streak:0},
-  {id:343,kanji:"",kana:"なな",meaning:"7",note:"",theme:"숫자",addedAt:343,quizCount:0,wrongCount:0,streak:0},
-  {id:344,kanji:"",kana:"はち",meaning:"8",note:"",theme:"숫자",addedAt:344,quizCount:0,wrongCount:0,streak:0},
-  {id:345,kanji:"",kana:"きゅう",meaning:"9",note:"",theme:"숫자",addedAt:345,quizCount:0,wrongCount:0,streak:0},
-  {id:346,kanji:"",kana:"じゅう",meaning:"10",note:"",theme:"숫자",addedAt:346,quizCount:0,wrongCount:0,streak:0},
-  {id:347,kanji:"",kana:"ひゃく",meaning:"100",note:"",theme:"숫자",addedAt:347,quizCount:0,wrongCount:0,streak:0},
-  {id:348,kanji:"",kana:"せん",meaning:"1000",note:"",theme:"숫자",addedAt:348,quizCount:0,wrongCount:0,streak:0},
-  {id:349,kanji:"",kana:"まん",meaning:"10000",note:"",theme:"숫자",addedAt:349,quizCount:0,wrongCount:0,streak:0},
-  {id:350,kanji:"",kana:"にじゅう",meaning:"20",note:"",theme:"숫자",addedAt:350,quizCount:0,wrongCount:0,streak:0},
-  {id:351,kanji:"",kana:"さんじゅう",meaning:"30",note:"",theme:"숫자",addedAt:351,quizCount:0,wrongCount:0,streak:0},
-  {id:352,kanji:"",kana:"よんじゅう",meaning:"40",note:"",theme:"숫자",addedAt:352,quizCount:0,wrongCount:0,streak:0},
-  {id:353,kanji:"",kana:"ごじゅう",meaning:"50",note:"",theme:"숫자",addedAt:353,quizCount:0,wrongCount:0,streak:0},
-  {id:354,kanji:"",kana:"ろくじゅう",meaning:"60",note:"",theme:"숫자",addedAt:354,quizCount:0,wrongCount:0,streak:0},
-  {id:355,kanji:"",kana:"ななじゅう",meaning:"70",note:"",theme:"숫자",addedAt:355,quizCount:0,wrongCount:0,streak:0},
-  {id:356,kanji:"",kana:"はちじゅう",meaning:"80",note:"",theme:"숫자",addedAt:356,quizCount:0,wrongCount:0,streak:0},
-  {id:357,kanji:"",kana:"きゅうじゅう",meaning:"90",note:"",theme:"숫자",addedAt:357,quizCount:0,wrongCount:0,streak:0},
-  {id:358,kanji:"",kana:"にひゃく",meaning:"200",note:"",theme:"숫자",addedAt:358,quizCount:0,wrongCount:0,streak:0},
-  {id:359,kanji:"",kana:"さんびゃく",meaning:"300",note:"",theme:"숫자",addedAt:359,quizCount:0,wrongCount:0,streak:0},
-  {id:360,kanji:"",kana:"よんひゃく",meaning:"400",note:"",theme:"숫자",addedAt:360,quizCount:0,wrongCount:0,streak:0},
-  {id:361,kanji:"",kana:"ごひゃく",meaning:"500",note:"",theme:"숫자",addedAt:361,quizCount:0,wrongCount:0,streak:0},
-  {id:362,kanji:"",kana:"ろっぴゃく",meaning:"600",note:"",theme:"숫자",addedAt:362,quizCount:0,wrongCount:0,streak:0},
-  {id:363,kanji:"",kana:"ななひゃく",meaning:"700",note:"",theme:"숫자",addedAt:363,quizCount:0,wrongCount:0,streak:0},
-  {id:364,kanji:"",kana:"はっぴゃく",meaning:"800",note:"",theme:"숫자",addedAt:364,quizCount:0,wrongCount:0,streak:0},
-  {id:365,kanji:"",kana:"きゅうひゃく",meaning:"900",note:"",theme:"숫자",addedAt:365,quizCount:0,wrongCount:0,streak:0},
-  {id:366,kanji:"",kana:"にせん",meaning:"2000",note:"",theme:"숫자",addedAt:366,quizCount:0,wrongCount:0,streak:0},
-  {id:367,kanji:"",kana:"さんぜん",meaning:"3000",note:"",theme:"숫자",addedAt:367,quizCount:0,wrongCount:0,streak:0},
-  {id:368,kanji:"",kana:"よんせん",meaning:"4000",note:"",theme:"숫자",addedAt:368,quizCount:0,wrongCount:0,streak:0},
-  {id:369,kanji:"",kana:"ごせん",meaning:"5000",note:"",theme:"숫자",addedAt:369,quizCount:0,wrongCount:0,streak:0},
-  {id:370,kanji:"",kana:"ろくせん",meaning:"6000",note:"",theme:"숫자",addedAt:370,quizCount:0,wrongCount:0,streak:0},
-  {id:371,kanji:"",kana:"ななせん",meaning:"7000",note:"",theme:"숫자",addedAt:371,quizCount:0,wrongCount:0,streak:0},
-  {id:372,kanji:"",kana:"はっせん",meaning:"8000",note:"",theme:"숫자",addedAt:372,quizCount:0,wrongCount:0,streak:0},
-  {id:373,kanji:"",kana:"きゅうせん",meaning:"9000",note:"",theme:"숫자",addedAt:373,quizCount:0,wrongCount:0,streak:0},
-  {id:374,kanji:"",kana:"ひとり",meaning:"1명",note:"",theme:"수사·조수사",addedAt:374,quizCount:0,wrongCount:0,streak:0},
-  {id:375,kanji:"",kana:"ふたり",meaning:"2명",note:"",theme:"수사·조수사",addedAt:375,quizCount:0,wrongCount:0,streak:0},
-  {id:376,kanji:"",kana:"さんにん",meaning:"3명",note:"",theme:"수사·조수사",addedAt:376,quizCount:0,wrongCount:0,streak:0},
-  {id:377,kanji:"",kana:"よにん",meaning:"4명",note:"",theme:"수사·조수사",addedAt:377,quizCount:0,wrongCount:0,streak:0},
-  {id:378,kanji:"",kana:"ごにん",meaning:"5명",note:"",theme:"수사·조수사",addedAt:378,quizCount:0,wrongCount:0,streak:0},
-  {id:379,kanji:"",kana:"ろくにん",meaning:"6명",note:"",theme:"수사·조수사",addedAt:379,quizCount:0,wrongCount:0,streak:0},
-  {id:380,kanji:"",kana:"しちにん",meaning:"7명",note:"",theme:"수사·조수사",addedAt:380,quizCount:0,wrongCount:0,streak:0},
-  {id:381,kanji:"",kana:"はちにん",meaning:"8명",note:"",theme:"수사·조수사",addedAt:381,quizCount:0,wrongCount:0,streak:0},
-  {id:382,kanji:"",kana:"きゅうにん",meaning:"9명",note:"",theme:"수사·조수사",addedAt:382,quizCount:0,wrongCount:0,streak:0},
-  {id:383,kanji:"",kana:"じゅうにん",meaning:"10명",note:"",theme:"수사·조수사",addedAt:383,quizCount:0,wrongCount:0,streak:0},
-  {id:384,kanji:"",kana:"なんにん",meaning:"몇 명",note:"",theme:"수사·조수사",addedAt:384,quizCount:0,wrongCount:0,streak:0},
-  {id:385,kanji:"",kana:"いちまい",meaning:"1장",note:"",theme:"수사·조수사",addedAt:385,quizCount:0,wrongCount:0,streak:0},
-  {id:386,kanji:"",kana:"にまい",meaning:"2장",note:"",theme:"수사·조수사",addedAt:386,quizCount:0,wrongCount:0,streak:0},
-  {id:387,kanji:"",kana:"さんまい",meaning:"3장",note:"",theme:"수사·조수사",addedAt:387,quizCount:0,wrongCount:0,streak:0},
-  {id:388,kanji:"",kana:"よんまい",meaning:"4장",note:"",theme:"수사·조수사",addedAt:388,quizCount:0,wrongCount:0,streak:0},
-  {id:389,kanji:"",kana:"ごまい",meaning:"5장",note:"",theme:"수사·조수사",addedAt:389,quizCount:0,wrongCount:0,streak:0},
-  {id:390,kanji:"",kana:"ろくまい",meaning:"6장",note:"",theme:"수사·조수사",addedAt:390,quizCount:0,wrongCount:0,streak:0},
-  {id:391,kanji:"",kana:"ななまい",meaning:"7장",note:"",theme:"수사·조수사",addedAt:391,quizCount:0,wrongCount:0,streak:0},
-  {id:392,kanji:"",kana:"はちまい",meaning:"8장",note:"",theme:"수사·조수사",addedAt:392,quizCount:0,wrongCount:0,streak:0},
-  {id:393,kanji:"",kana:"きゅうまい",meaning:"9장",note:"",theme:"수사·조수사",addedAt:393,quizCount:0,wrongCount:0,streak:0},
-  {id:394,kanji:"",kana:"じゅうまい",meaning:"10장",note:"",theme:"수사·조수사",addedAt:394,quizCount:0,wrongCount:0,streak:0},
-  {id:395,kanji:"",kana:"なんまい",meaning:"몇 장",note:"",theme:"수사·조수사",addedAt:395,quizCount:0,wrongCount:0,streak:0},
-  {id:396,kanji:"",kana:"いっぽん",meaning:"1자루",note:"",theme:"수사·조수사",addedAt:396,quizCount:0,wrongCount:0,streak:0},
-  {id:397,kanji:"",kana:"にほん",meaning:"2자루",note:"",theme:"수사·조수사",addedAt:397,quizCount:0,wrongCount:0,streak:0},
-  {id:398,kanji:"",kana:"さんぼん",meaning:"3자루",note:"",theme:"수사·조수사",addedAt:398,quizCount:0,wrongCount:0,streak:0},
-  {id:399,kanji:"",kana:"よんほん",meaning:"4자루",note:"",theme:"수사·조수사",addedAt:399,quizCount:0,wrongCount:0,streak:0},
-  {id:400,kanji:"",kana:"ごほん",meaning:"5자루",note:"",theme:"수사·조수사",addedAt:400,quizCount:0,wrongCount:0,streak:0},
-  {id:401,kanji:"",kana:"ろっぽん",meaning:"6자루",note:"",theme:"수사·조수사",addedAt:401,quizCount:0,wrongCount:0,streak:0},
-  {id:402,kanji:"",kana:"ななほん",meaning:"7자루",note:"",theme:"수사·조수사",addedAt:402,quizCount:0,wrongCount:0,streak:0},
-  {id:403,kanji:"",kana:"はっぽん",meaning:"8자루",note:"",theme:"수사·조수사",addedAt:403,quizCount:0,wrongCount:0,streak:0},
-  {id:404,kanji:"",kana:"きゅうほん",meaning:"9자루",note:"",theme:"수사·조수사",addedAt:404,quizCount:0,wrongCount:0,streak:0},
-  {id:405,kanji:"",kana:"じゅっぽん",meaning:"10자루",note:"",theme:"수사·조수사",addedAt:405,quizCount:0,wrongCount:0,streak:0},
-  {id:406,kanji:"",kana:"なんぼん",meaning:"몇 자루",note:"",theme:"수사·조수사",addedAt:406,quizCount:0,wrongCount:0,streak:0},
-  {id:407,kanji:"",kana:"いちじかん",meaning:"1시간",note:"",theme:"수사·조수사",addedAt:407,quizCount:0,wrongCount:0,streak:0},
-  {id:408,kanji:"",kana:"にじかん",meaning:"2시간",note:"",theme:"수사·조수사",addedAt:408,quizCount:0,wrongCount:0,streak:0},
-  {id:409,kanji:"",kana:"さんじかん",meaning:"3시간",note:"",theme:"수사·조수사",addedAt:409,quizCount:0,wrongCount:0,streak:0},
-  {id:410,kanji:"",kana:"よじかん",meaning:"4시간",note:"",theme:"수사·조수사",addedAt:410,quizCount:0,wrongCount:0,streak:0},
-  {id:411,kanji:"",kana:"ごじかん",meaning:"5시간",note:"",theme:"수사·조수사",addedAt:411,quizCount:0,wrongCount:0,streak:0},
-  {id:412,kanji:"",kana:"ろくじかん",meaning:"6시간",note:"",theme:"수사·조수사",addedAt:412,quizCount:0,wrongCount:0,streak:0},
-  {id:413,kanji:"",kana:"しちじかん",meaning:"7시간",note:"",theme:"수사·조수사",addedAt:413,quizCount:0,wrongCount:0,streak:0},
-  {id:414,kanji:"",kana:"はちじかん",meaning:"8시간",note:"",theme:"수사·조수사",addedAt:414,quizCount:0,wrongCount:0,streak:0},
-  {id:415,kanji:"",kana:"きゅうじかん",meaning:"9시간",note:"",theme:"수사·조수사",addedAt:415,quizCount:0,wrongCount:0,streak:0},
-  {id:416,kanji:"",kana:"じゅうじかん",meaning:"10시간",note:"",theme:"수사·조수사",addedAt:416,quizCount:0,wrongCount:0,streak:0},
-  {id:417,kanji:"",kana:"なんじかん",meaning:"몇 시간",note:"",theme:"수사·조수사",addedAt:417,quizCount:0,wrongCount:0,streak:0},
-  {id:418,kanji:"",kana:"いっしゅうかん",meaning:"1주일",note:"",theme:"수사·조수사",addedAt:418,quizCount:0,wrongCount:0,streak:0},
-  {id:419,kanji:"",kana:"にしゅうかん",meaning:"2주일",note:"",theme:"수사·조수사",addedAt:419,quizCount:0,wrongCount:0,streak:0},
-  {id:420,kanji:"",kana:"さんしゅうかん",meaning:"3주일",note:"",theme:"수사·조수사",addedAt:420,quizCount:0,wrongCount:0,streak:0},
-  {id:421,kanji:"",kana:"よんしゅうかん",meaning:"4주일",note:"",theme:"수사·조수사",addedAt:421,quizCount:0,wrongCount:0,streak:0},
-  {id:422,kanji:"",kana:"ごしゅうかん",meaning:"5주일",note:"",theme:"수사·조수사",addedAt:422,quizCount:0,wrongCount:0,streak:0},
-  {id:423,kanji:"",kana:"ろくしゅうかん",meaning:"6주일",note:"",theme:"수사·조수사",addedAt:423,quizCount:0,wrongCount:0,streak:0},
-  {id:424,kanji:"",kana:"ななしゅうかん",meaning:"7주일",note:"",theme:"수사·조수사",addedAt:424,quizCount:0,wrongCount:0,streak:0},
-  {id:425,kanji:"",kana:"はっしゅうかん",meaning:"8주일",note:"",theme:"수사·조수사",addedAt:425,quizCount:0,wrongCount:0,streak:0},
-  {id:426,kanji:"",kana:"きゅうしゅうかん",meaning:"9주일",note:"",theme:"수사·조수사",addedAt:426,quizCount:0,wrongCount:0,streak:0},
-  {id:427,kanji:"",kana:"じゅっしゅうかん",meaning:"10주일",note:"",theme:"수사·조수사",addedAt:427,quizCount:0,wrongCount:0,streak:0},
-  {id:428,kanji:"",kana:"なんしゅうかん",meaning:"몇 주일",note:"",theme:"수사·조수사",addedAt:428,quizCount:0,wrongCount:0,streak:0},
-  {id:429,kanji:"",kana:"いっかげつ",meaning:"1개월",note:"",theme:"수사·조수사",addedAt:429,quizCount:0,wrongCount:0,streak:0},
-  {id:430,kanji:"",kana:"にかげつ",meaning:"2개월",note:"",theme:"수사·조수사",addedAt:430,quizCount:0,wrongCount:0,streak:0},
-  {id:431,kanji:"",kana:"さんかげつ",meaning:"3개월",note:"",theme:"수사·조수사",addedAt:431,quizCount:0,wrongCount:0,streak:0},
-  {id:432,kanji:"",kana:"よんかげつ",meaning:"4개월",note:"",theme:"수사·조수사",addedAt:432,quizCount:0,wrongCount:0,streak:0},
-  {id:433,kanji:"",kana:"ごかげつ",meaning:"5개월",note:"",theme:"수사·조수사",addedAt:433,quizCount:0,wrongCount:0,streak:0},
-  {id:434,kanji:"",kana:"ろっかげつ",meaning:"6개월",note:"",theme:"수사·조수사",addedAt:434,quizCount:0,wrongCount:0,streak:0},
-  {id:435,kanji:"",kana:"ななかげつ",meaning:"7개월",note:"",theme:"수사·조수사",addedAt:435,quizCount:0,wrongCount:0,streak:0},
-  {id:436,kanji:"",kana:"はっかげつ",meaning:"8개월",note:"",theme:"수사·조수사",addedAt:436,quizCount:0,wrongCount:0,streak:0},
-  {id:437,kanji:"",kana:"きゅうかげつ",meaning:"9개월",note:"",theme:"수사·조수사",addedAt:437,quizCount:0,wrongCount:0,streak:0},
-  {id:438,kanji:"",kana:"じゅっかげつ",meaning:"10개월",note:"",theme:"수사·조수사",addedAt:438,quizCount:0,wrongCount:0,streak:0},
-  {id:439,kanji:"",kana:"なんかげつ",meaning:"몇 개월",note:"",theme:"수사·조수사",addedAt:439,quizCount:0,wrongCount:0,streak:0},
-  {id:440,kanji:"",kana:"いっさい",meaning:"1살",note:"",theme:"수사·조수사",addedAt:440,quizCount:0,wrongCount:0,streak:0},
-  {id:441,kanji:"",kana:"にさい",meaning:"2살",note:"",theme:"수사·조수사",addedAt:441,quizCount:0,wrongCount:0,streak:0},
-  {id:442,kanji:"",kana:"さんさい",meaning:"3살",note:"",theme:"수사·조수사",addedAt:442,quizCount:0,wrongCount:0,streak:0},
-  {id:443,kanji:"",kana:"よんさい",meaning:"4살",note:"",theme:"수사·조수사",addedAt:443,quizCount:0,wrongCount:0,streak:0},
-  {id:444,kanji:"",kana:"ごさい",meaning:"5살",note:"",theme:"수사·조수사",addedAt:444,quizCount:0,wrongCount:0,streak:0},
-  {id:445,kanji:"",kana:"ろくさい",meaning:"6살",note:"",theme:"수사·조수사",addedAt:445,quizCount:0,wrongCount:0,streak:0},
-  {id:446,kanji:"",kana:"ななさい",meaning:"7살",note:"",theme:"수사·조수사",addedAt:446,quizCount:0,wrongCount:0,streak:0},
-  {id:447,kanji:"",kana:"はっさい",meaning:"8살",note:"",theme:"수사·조수사",addedAt:447,quizCount:0,wrongCount:0,streak:0},
-  {id:448,kanji:"",kana:"きゅうさい",meaning:"9살",note:"",theme:"수사·조수사",addedAt:448,quizCount:0,wrongCount:0,streak:0},
-  {id:449,kanji:"",kana:"じゅっさい",meaning:"10살",note:"",theme:"수사·조수사",addedAt:449,quizCount:0,wrongCount:0,streak:0},
-  {id:450,kanji:"",kana:"なんさい",meaning:"몇 살",note:"",theme:"수사·조수사",addedAt:450,quizCount:0,wrongCount:0,streak:0},
-  {id:451,kanji:"",kana:"いっかい",meaning:"1층/1번",note:"",theme:"수사·조수사",addedAt:451,quizCount:0,wrongCount:0,streak:0},
-  {id:452,kanji:"",kana:"にかい",meaning:"2층/2번",note:"",theme:"수사·조수사",addedAt:452,quizCount:0,wrongCount:0,streak:0},
-  {id:453,kanji:"",kana:"さんがい",meaning:"3층",note:"",theme:"수사·조수사",addedAt:453,quizCount:0,wrongCount:0,streak:0},
-  {id:454,kanji:"",kana:"よんかい",meaning:"4층/4번",note:"",theme:"수사·조수사",addedAt:454,quizCount:0,wrongCount:0,streak:0},
-  {id:455,kanji:"",kana:"ごかい",meaning:"5층/5번",note:"",theme:"수사·조수사",addedAt:455,quizCount:0,wrongCount:0,streak:0},
-  {id:456,kanji:"",kana:"ろっかい",meaning:"6층/6번",note:"",theme:"수사·조수사",addedAt:456,quizCount:0,wrongCount:0,streak:0},
-  {id:457,kanji:"",kana:"ななかい",meaning:"7층/7번",note:"",theme:"수사·조수사",addedAt:457,quizCount:0,wrongCount:0,streak:0},
-  {id:458,kanji:"",kana:"はっかい",meaning:"8층/8번",note:"",theme:"수사·조수사",addedAt:458,quizCount:0,wrongCount:0,streak:0},
-  {id:459,kanji:"",kana:"きゅうかい",meaning:"9층/9번",note:"",theme:"수사·조수사",addedAt:459,quizCount:0,wrongCount:0,streak:0},
-  {id:460,kanji:"",kana:"じゅっかい",meaning:"10층/10번",note:"",theme:"수사·조수사",addedAt:460,quizCount:0,wrongCount:0,streak:0},
-  {id:461,kanji:"",kana:"なんがい",meaning:"몇 층",note:"",theme:"수사·조수사",addedAt:461,quizCount:0,wrongCount:0,streak:0},
-  {id:462,kanji:"",kana:"いっこ",meaning:"1개(個)",note:"",theme:"수사·조수사",addedAt:462,quizCount:0,wrongCount:0,streak:0},
-  {id:463,kanji:"",kana:"にこ",meaning:"2개(個)",note:"",theme:"수사·조수사",addedAt:463,quizCount:0,wrongCount:0,streak:0},
-  {id:464,kanji:"",kana:"さんこ",meaning:"3개(個)",note:"",theme:"수사·조수사",addedAt:464,quizCount:0,wrongCount:0,streak:0},
-  {id:465,kanji:"",kana:"よんこ",meaning:"4개(個)",note:"",theme:"수사·조수사",addedAt:465,quizCount:0,wrongCount:0,streak:0},
-  {id:466,kanji:"",kana:"ごこ",meaning:"5개(個)",note:"",theme:"수사·조수사",addedAt:466,quizCount:0,wrongCount:0,streak:0},
-  {id:467,kanji:"",kana:"ろっこ",meaning:"6개(個)",note:"",theme:"수사·조수사",addedAt:467,quizCount:0,wrongCount:0,streak:0},
-  {id:468,kanji:"",kana:"ななこ",meaning:"7개(個)",note:"",theme:"수사·조수사",addedAt:468,quizCount:0,wrongCount:0,streak:0},
-  {id:469,kanji:"",kana:"はっこ",meaning:"8개(個)",note:"",theme:"수사·조수사",addedAt:469,quizCount:0,wrongCount:0,streak:0},
-  {id:470,kanji:"",kana:"きゅうこ",meaning:"9개(個)",note:"",theme:"수사·조수사",addedAt:470,quizCount:0,wrongCount:0,streak:0},
-  {id:471,kanji:"",kana:"じゅっこ",meaning:"10개(個)",note:"",theme:"수사·조수사",addedAt:471,quizCount:0,wrongCount:0,streak:0},
-  {id:472,kanji:"",kana:"なんこ",meaning:"몇 개(個)",note:"",theme:"수사·조수사",addedAt:472,quizCount:0,wrongCount:0,streak:0},
-  {id:473,kanji:"",kana:"いっぱい",meaning:"1잔",note:"",theme:"수사·조수사",addedAt:473,quizCount:0,wrongCount:0,streak:0},
-  {id:474,kanji:"",kana:"にはい",meaning:"2잔",note:"",theme:"수사·조수사",addedAt:474,quizCount:0,wrongCount:0,streak:0},
-  {id:475,kanji:"",kana:"さんばい",meaning:"3잔",note:"",theme:"수사·조수사",addedAt:475,quizCount:0,wrongCount:0,streak:0},
-  {id:476,kanji:"",kana:"よんはい",meaning:"4잔",note:"",theme:"수사·조수사",addedAt:476,quizCount:0,wrongCount:0,streak:0},
-  {id:477,kanji:"",kana:"ごはい",meaning:"5잔",note:"",theme:"수사·조수사",addedAt:477,quizCount:0,wrongCount:0,streak:0},
-  {id:478,kanji:"",kana:"ろっぱい",meaning:"6잔",note:"",theme:"수사·조수사",addedAt:478,quizCount:0,wrongCount:0,streak:0},
-  {id:479,kanji:"",kana:"ななはい",meaning:"7잔",note:"",theme:"수사·조수사",addedAt:479,quizCount:0,wrongCount:0,streak:0},
-  {id:480,kanji:"",kana:"はっぱい",meaning:"8잔",note:"",theme:"수사·조수사",addedAt:480,quizCount:0,wrongCount:0,streak:0},
-  {id:481,kanji:"",kana:"きゅうはい",meaning:"9잔",note:"",theme:"수사·조수사",addedAt:481,quizCount:0,wrongCount:0,streak:0},
-  {id:482,kanji:"",kana:"じゅっぱい",meaning:"10잔",note:"",theme:"수사·조수사",addedAt:482,quizCount:0,wrongCount:0,streak:0},
-  {id:483,kanji:"",kana:"なんばい",meaning:"몇 잔",note:"",theme:"수사·조수사",addedAt:483,quizCount:0,wrongCount:0,streak:0},
-  {id:484,kanji:"始業式",kana:"しぎょうしき",meaning:"개학",note:"",theme:"기초 표현",addedAt:484,quizCount:0,wrongCount:0,streak:0},
-  {id:485,kanji:"部活",kana:"ぶかつ",meaning:"동아리/부활동",note:"",theme:"학교행사",addedAt:485,quizCount:0,wrongCount:0,streak:0},
-  {id:486,kanji:"優しい",kana:"やさしい",meaning:"상냥하다",note:"",theme:"형용사",addedAt:486,quizCount:0,wrongCount:0,streak:0},
-  {id:487,kanji:"嬉しい",kana:"うれしい",meaning:"기쁘다",note:"",theme:"형용사",addedAt:487,quizCount:0,wrongCount:0,streak:0},
-  {id:488,kanji:"悲しい",kana:"かなしい",meaning:"슬프다",note:"",theme:"형용사",addedAt:488,quizCount:0,wrongCount:0,streak:0},
-  {id:489,kanji:"寂しい",kana:"さびしい",meaning:"외롭다",note:"",theme:"형용사",addedAt:489,quizCount:0,wrongCount:0,streak:0},
-  {id:490,kanji:"恥ずかしい",kana:"はずかしい",meaning:"부끄럽다",note:"",theme:"형용사",addedAt:490,quizCount:0,wrongCount:0,streak:0},
-  {id:491,kanji:"忙しい",kana:"いそがしい",meaning:"바쁘다",note:"",theme:"형용사",addedAt:491,quizCount:0,wrongCount:0,streak:0},
-  {id:492,kanji:"珍しい",kana:"めずらしい",meaning:"드물다",note:"",theme:"형용사",addedAt:492,quizCount:0,wrongCount:0,streak:0},
-  {id:493,kanji:"厳しい",kana:"きびしい",meaning:"엄격하다",note:"",theme:"형용사",addedAt:493,quizCount:0,wrongCount:0,streak:0},
-  {id:494,kanji:"涼しい",kana:"すずしい",meaning:"시원하다",note:"",theme:"형용사",addedAt:494,quizCount:0,wrongCount:0,streak:0},
-  {id:495,kanji:"暑苦しい",kana:"あつくるしい",meaning:"답답하게 덥다",note:"",theme:"형용사",addedAt:495,quizCount:0,wrongCount:0,streak:0},
-  {id:496,kanji:"怖い",kana:"こわい",meaning:"무섭다",note:"",theme:"형용사",addedAt:496,quizCount:0,wrongCount:0,streak:0},
-  {id:497,kanji:"細かい",kana:"こまかい",meaning:"세밀하다",note:"",theme:"형용사",addedAt:497,quizCount:0,wrongCount:0,streak:0},
-  {id:498,kanji:"温かい",kana:"あたたかい",meaning:"따뜻하다 (음식·손)",note:"",theme:"형용사",addedAt:498,quizCount:0,wrongCount:0,streak:0},
-  {id:499,kanji:"暖かい",kana:"あたたかい",meaning:"따뜻하다 (날씨·계절)",note:"",theme:"형용사",addedAt:499,quizCount:0,wrongCount:0,streak:0},
-  {id:500,kanji:"冷たい",kana:"つめたい",meaning:"차갑다",note:"",theme:"형용사",addedAt:500,quizCount:0,wrongCount:0,streak:0},
-  {id:501,kanji:"眠い",kana:"ねむい",meaning:"졸리다",note:"",theme:"형용사",addedAt:501,quizCount:0,wrongCount:0,streak:0},
-  {id:502,kanji:"痒い",kana:"かゆい",meaning:"가렵다",note:"",theme:"형용사",addedAt:502,quizCount:0,wrongCount:0,streak:0},
-  {id:503,kanji:"羨ましい",kana:"うらやましい",meaning:"부럽다",note:"",theme:"형용사",addedAt:503,quizCount:0,wrongCount:0,streak:0},
-  {id:504,kanji:"懐かしい",kana:"なつかしい",meaning:"그립다",note:"",theme:"형용사",addedAt:504,quizCount:0,wrongCount:0,streak:0},
-  {id:505,kanji:"怪しい",kana:"あやしい",meaning:"수상하다",note:"",theme:"형용사",addedAt:505,quizCount:0,wrongCount:0,streak:0},
-  {id:506,kanji:"面倒くさい",kana:"めんどうくさい",meaning:"귀찮다",note:"",theme:"형용사",addedAt:506,quizCount:0,wrongCount:0,streak:0},
-  {id:507,kanji:"暑い",kana:"あつい",meaning:"덥다 (날씨·기온)",note:"",theme:"형용사",addedAt:507,quizCount:0,wrongCount:0,streak:0},
-  {id:508,kanji:"熱い",kana:"あつい",meaning:"뜨겁다 (음식·물·온도)",note:"",theme:"형용사",addedAt:508,quizCount:0,wrongCount:0,streak:0},
-  {id:509,kanji:"厚い",kana:"あつい",meaning:"두껍다",note:"",theme:"형용사",addedAt:509,quizCount:0,wrongCount:0,streak:0},
-  {id:510,kanji:"早い",kana:"はやい",meaning:"이르다 (시간)",note:"",theme:"형용사",addedAt:510,quizCount:0,wrongCount:0,streak:0},
-  {id:511,kanji:"速い",kana:"はやい",meaning:"빠르다 (속도)",note:"",theme:"형용사",addedAt:511,quizCount:0,wrongCount:0,streak:0},
-  {id:512,kanji:"辛い",kana:"つらい",meaning:"괴롭다",note:"",theme:"형용사",addedAt:512,quizCount:0,wrongCount:0,streak:0},
-  {id:513,kanji:"若い",kana:"わかい",meaning:"젊다",note:"",theme:"형용사",addedAt:513,quizCount:0,wrongCount:0,streak:0},
-  {id:514,kanji:"赤い",kana:"あかい",meaning:"빨갛다",note:"",theme:"형용사",addedAt:514,quizCount:0,wrongCount:0,streak:0},
-  {id:515,kanji:"青い",kana:"あおい",meaning:"파랗다",note:"",theme:"형용사",addedAt:515,quizCount:0,wrongCount:0,streak:0},
-  {id:516,kanji:"白い",kana:"しろい",meaning:"하얗다",note:"",theme:"형용사",addedAt:516,quizCount:0,wrongCount:0,streak:0},
-  {id:517,kanji:"黒い",kana:"くろい",meaning:"검다",note:"",theme:"형용사",addedAt:517,quizCount:0,wrongCount:0,streak:0},
-  {id:518,kanji:"丸い",kana:"まるい",meaning:"둥글다",note:"",theme:"형용사",addedAt:518,quizCount:0,wrongCount:0,streak:0},
-  {id:519,kanji:"四角い",kana:"しかくい",meaning:"네모나다",note:"",theme:"형용사",addedAt:519,quizCount:0,wrongCount:0,streak:0},
-  {id:520,kanji:"柔らかい",kana:"やわらかい",meaning:"부드럽다",note:"",theme:"형용사",addedAt:520,quizCount:0,wrongCount:0,streak:0},
-  {id:521,kanji:"固い",kana:"かたい",meaning:"굳다, 딱딱하다",note:"",theme:"형용사",addedAt:521,quizCount:0,wrongCount:0,streak:0},
-  {id:522,kanji:"硬い",kana:"かたい",meaning:"단단하다",note:"",theme:"형용사",addedAt:522,quizCount:0,wrongCount:0,streak:0},
-  {id:523,kanji:"堅い",kana:"かたい",meaning:"엄격하다, 견실하다",note:"",theme:"형용사",addedAt:523,quizCount:0,wrongCount:0,streak:0},
-  {id:524,kanji:"浅い",kana:"あさい",meaning:"얕다",note:"",theme:"형용사",addedAt:524,quizCount:0,wrongCount:0,streak:0},
-  {id:525,kanji:"深い",kana:"ふかい",meaning:"깊다",note:"",theme:"형용사",addedAt:525,quizCount:0,wrongCount:0,streak:0},
-  {id:526,kanji:"遠い",kana:"とおい",meaning:"멀다",note:"",theme:"형용사",addedAt:526,quizCount:0,wrongCount:0,streak:0},
-  {id:527,kanji:"近い",kana:"ちかい",meaning:"가깝다",note:"",theme:"형용사",addedAt:527,quizCount:0,wrongCount:0,streak:0},
-  {id:528,kanji:"明るい",kana:"あかるい",meaning:"밝다",note:"",theme:"형용사",addedAt:528,quizCount:0,wrongCount:0,streak:0},
-  {id:529,kanji:"暗い",kana:"くらい",meaning:"어둡다",note:"",theme:"형용사",addedAt:529,quizCount:0,wrongCount:0,streak:0},
-  {id:530,kanji:"甘い",kana:"あまい",meaning:"달다",note:"",theme:"형용사",addedAt:530,quizCount:0,wrongCount:0,streak:0},
-  {id:531,kanji:"粗い",kana:"あらい",meaning:"거칠다 (입자·성격이 세밀하지 않음)",note:"",theme:"형용사",addedAt:531,quizCount:0,wrongCount:0,streak:0},
-  {id:532,kanji:"荒い",kana:"あらい",meaning:"거칠다 (파도·운전·성격이 난폭함)",note:"",theme:"형용사",addedAt:532,quizCount:0,wrongCount:0,streak:0},
-  {id:533,kanji:"北海道",kana:"ほっかいどう",meaning:"홋카이도",note:"",theme:"일본 지리",addedAt:533,quizCount:0,wrongCount:0,streak:0},
-  {id:534,kanji:"青森県",kana:"あおもりけん",meaning:"아오모리현",note:"",theme:"일본 지리",addedAt:534,quizCount:0,wrongCount:0,streak:0},
-  {id:535,kanji:"岩手県",kana:"いわてけん",meaning:"이와테현",note:"",theme:"일본 지리",addedAt:535,quizCount:0,wrongCount:0,streak:0},
-  {id:536,kanji:"宮城県",kana:"みやぎけん",meaning:"미야기현",note:"",theme:"일본 지리",addedAt:536,quizCount:0,wrongCount:0,streak:0},
-  {id:537,kanji:"秋田県",kana:"あきたけん",meaning:"아키타현",note:"",theme:"일본 지리",addedAt:537,quizCount:0,wrongCount:0,streak:0},
-  {id:538,kanji:"山形県",kana:"やまがたけん",meaning:"야마가타현",note:"",theme:"일본 지리",addedAt:538,quizCount:0,wrongCount:0,streak:0},
-  {id:539,kanji:"福島県",kana:"ふくしまけん",meaning:"후쿠시마현",note:"",theme:"일본 지리",addedAt:539,quizCount:0,wrongCount:0,streak:0},
-  {id:540,kanji:"茨城県",kana:"いばらきけん",meaning:"이바라키현",note:"",theme:"일본 지리",addedAt:540,quizCount:0,wrongCount:0,streak:0},
-  {id:541,kanji:"栃木県",kana:"とちぎけん",meaning:"도치기현",note:"",theme:"일본 지리",addedAt:541,quizCount:0,wrongCount:0,streak:0},
-  {id:542,kanji:"群馬県",kana:"ぐんまけん",meaning:"군마현",note:"",theme:"일본 지리",addedAt:542,quizCount:0,wrongCount:0,streak:0},
-  {id:543,kanji:"埼玉県",kana:"さいたまけん",meaning:"사이타마현",note:"",theme:"일본 지리",addedAt:543,quizCount:0,wrongCount:0,streak:0},
-  {id:544,kanji:"千葉県",kana:"ちばけん",meaning:"지바현",note:"",theme:"일본 지리",addedAt:544,quizCount:0,wrongCount:0,streak:0},
-  {id:545,kanji:"東京都",kana:"とうきょうと",meaning:"도쿄도",note:"",theme:"일본 지리",addedAt:545,quizCount:0,wrongCount:0,streak:0},
-  {id:546,kanji:"神奈川県",kana:"かながわけん",meaning:"가나가와현",note:"",theme:"일본 지리",addedAt:546,quizCount:0,wrongCount:0,streak:0},
-  {id:547,kanji:"新潟県",kana:"にいがたけん",meaning:"니가타현",note:"",theme:"일본 지리",addedAt:547,quizCount:0,wrongCount:0,streak:0},
-  {id:548,kanji:"富山県",kana:"とやまけん",meaning:"도야마현",note:"",theme:"일본 지리",addedAt:548,quizCount:0,wrongCount:0,streak:0},
-  {id:549,kanji:"石川県",kana:"いしかわけん",meaning:"이시카와현",note:"",theme:"일본 지리",addedAt:549,quizCount:0,wrongCount:0,streak:0},
-  {id:550,kanji:"福井県",kana:"ふくいけん",meaning:"후쿠이현",note:"",theme:"일본 지리",addedAt:550,quizCount:0,wrongCount:0,streak:0},
-  {id:551,kanji:"山梨県",kana:"やまなしけん",meaning:"야마나시현",note:"",theme:"일본 지리",addedAt:551,quizCount:0,wrongCount:0,streak:0},
-  {id:552,kanji:"長野県",kana:"ながのけん",meaning:"나가노현",note:"",theme:"일본 지리",addedAt:552,quizCount:0,wrongCount:0,streak:0},
-  {id:553,kanji:"岐阜県",kana:"ぎふけん",meaning:"기후현",note:"",theme:"일본 지리",addedAt:553,quizCount:0,wrongCount:0,streak:0},
-  {id:554,kanji:"静岡県",kana:"しずおかけん",meaning:"시즈오카현",note:"",theme:"일본 지리",addedAt:554,quizCount:0,wrongCount:0,streak:0},
-  {id:555,kanji:"愛知県",kana:"あいちけん",meaning:"아이치현",note:"",theme:"일본 지리",addedAt:555,quizCount:0,wrongCount:0,streak:0},
-  {id:556,kanji:"三重県",kana:"みえけん",meaning:"미에현",note:"",theme:"일본 지리",addedAt:556,quizCount:0,wrongCount:0,streak:0},
-  {id:557,kanji:"滋賀県",kana:"しがけん",meaning:"시가현",note:"",theme:"일본 지리",addedAt:557,quizCount:0,wrongCount:0,streak:0},
-  {id:558,kanji:"京都府",kana:"きょうとふ",meaning:"교토부",note:"",theme:"일본 지리",addedAt:558,quizCount:0,wrongCount:0,streak:0},
-  {id:559,kanji:"大阪府",kana:"おおさかふ",meaning:"오사카부",note:"",theme:"일본 지리",addedAt:559,quizCount:0,wrongCount:0,streak:0},
-  {id:560,kanji:"兵庫県",kana:"ひょうごけん",meaning:"효고현",note:"",theme:"일본 지리",addedAt:560,quizCount:0,wrongCount:0,streak:0},
-  {id:561,kanji:"奈良県",kana:"ならけん",meaning:"나라현",note:"",theme:"일본 지리",addedAt:561,quizCount:0,wrongCount:0,streak:0},
-  {id:562,kanji:"和歌山県",kana:"わかやまけん",meaning:"와카야마현",note:"",theme:"일본 지리",addedAt:562,quizCount:0,wrongCount:0,streak:0},
-  {id:563,kanji:"鳥取県",kana:"とっとりけん",meaning:"돗토리현",note:"",theme:"일본 지리",addedAt:563,quizCount:0,wrongCount:0,streak:0},
-  {id:564,kanji:"島根県",kana:"しまねけん",meaning:"시마네현",note:"",theme:"일본 지리",addedAt:564,quizCount:0,wrongCount:0,streak:0},
-  {id:565,kanji:"岡山県",kana:"おかやまけん",meaning:"오카야마현",note:"",theme:"일본 지리",addedAt:565,quizCount:0,wrongCount:0,streak:0},
-  {id:566,kanji:"広島県",kana:"ひろしまけん",meaning:"히로시마현",note:"",theme:"일본 지리",addedAt:566,quizCount:0,wrongCount:0,streak:0},
-  {id:567,kanji:"山口県",kana:"やまぐちけん",meaning:"야마구치현",note:"",theme:"일본 지리",addedAt:567,quizCount:0,wrongCount:0,streak:0},
-  {id:568,kanji:"徳島県",kana:"とくしまけん",meaning:"도쿠시마현",note:"",theme:"일본 지리",addedAt:568,quizCount:0,wrongCount:0,streak:0},
-  {id:569,kanji:"香川県",kana:"かがわけん",meaning:"가가와현",note:"",theme:"일본 지리",addedAt:569,quizCount:0,wrongCount:0,streak:0},
-  {id:570,kanji:"愛媛県",kana:"えひめけん",meaning:"에히메현",note:"",theme:"일본 지리",addedAt:570,quizCount:0,wrongCount:0,streak:0},
-  {id:571,kanji:"高知県",kana:"こうちけん",meaning:"고치현",note:"",theme:"일본 지리",addedAt:571,quizCount:0,wrongCount:0,streak:0},
-  {id:572,kanji:"福岡県",kana:"ふくおかけん",meaning:"후쿠오카현",note:"",theme:"일본 지리",addedAt:572,quizCount:0,wrongCount:0,streak:0},
-  {id:573,kanji:"佐賀県",kana:"さがけん",meaning:"사가현",note:"",theme:"일본 지리",addedAt:573,quizCount:0,wrongCount:0,streak:0},
-  {id:574,kanji:"長崎県",kana:"ながさきけん",meaning:"나가사키현",note:"",theme:"일본 지리",addedAt:574,quizCount:0,wrongCount:0,streak:0},
-  {id:575,kanji:"熊本県",kana:"くまもとけん",meaning:"구마모토현",note:"",theme:"일본 지리",addedAt:575,quizCount:0,wrongCount:0,streak:0},
-  {id:576,kanji:"大分県",kana:"おおいたけん",meaning:"오이타현",note:"",theme:"일본 지리",addedAt:576,quizCount:0,wrongCount:0,streak:0},
-  {id:577,kanji:"宮崎県",kana:"みやざきけん",meaning:"미야자키현",note:"",theme:"일본 지리",addedAt:577,quizCount:0,wrongCount:0,streak:0},
-  {id:578,kanji:"鹿児島県",kana:"かごしまけん",meaning:"가고시마현",note:"",theme:"일본 지리",addedAt:578,quizCount:0,wrongCount:0,streak:0},
-  {id:579,kanji:"沖縄県",kana:"おきなわけん",meaning:"오키나와현",note:"",theme:"일본 지리",addedAt:579,quizCount:0,wrongCount:0,streak:0},
-  {id:580,kanji:"東北地方",kana:"とうほくちほう",meaning:"도호쿠 지방",note:"",theme:"일본 지리",addedAt:580,quizCount:0,wrongCount:0,streak:0},
-  {id:581,kanji:"関東地方",kana:"かんとうちほう",meaning:"간토 지방",note:"",theme:"일본 지리",addedAt:581,quizCount:0,wrongCount:0,streak:0},
-  {id:582,kanji:"中部地方",kana:"ちゅうぶちほう",meaning:"주부 지방",note:"",theme:"일본 지리",addedAt:582,quizCount:0,wrongCount:0,streak:0},
-  {id:583,kanji:"近畿地方",kana:"きんきちほう",meaning:"긴키 지방",note:"",theme:"일본 지리",addedAt:583,quizCount:0,wrongCount:0,streak:0},
-  {id:584,kanji:"中国地方",kana:"ちゅうごくちほう",meaning:"주고쿠 지방",note:"",theme:"일본 지리",addedAt:584,quizCount:0,wrongCount:0,streak:0},
-  {id:585,kanji:"四国地方",kana:"しこくちほう",meaning:"시코쿠 지방",note:"",theme:"일본 지리",addedAt:585,quizCount:0,wrongCount:0,streak:0},
-  {id:586,kanji:"九州地方",kana:"きゅうしゅうちほう",meaning:"규슈 지방",note:"",theme:"일본 지리",addedAt:586,quizCount:0,wrongCount:0,streak:0},
-  {id:587,kanji:"沖縄地方",kana:"おきなわちほう",meaning:"오키나와 지방",note:"",theme:"일본 지리",addedAt:587,quizCount:0,wrongCount:0,streak:0}
+  {id:150,kanji:"",kana:"すきだ",meaning:"좋아하다",note:"",theme:"기초 표현",addedAt:150,quizCount:0,wrongCount:0,streak:0},
+  {id:151,kanji:"",kana:"すてきだ",meaning:"멋지다",note:"",theme:"기초 표현",addedAt:151,quizCount:0,wrongCount:0,streak:0},
+  {id:152,kanji:"",kana:"その",meaning:"그",note:"",theme:"기초 표현",addedAt:152,quizCount:0,wrongCount:0,streak:0},
+  {id:153,kanji:"",kana:"いいえ",meaning:"아니요",note:"",theme:"기초 표현",addedAt:153,quizCount:0,wrongCount:0,streak:0},
+  {id:154,kanji:"",kana:"まだまだ",meaning:"아직, 아직도",note:"",theme:"기초 표현",addedAt:154,quizCount:0,wrongCount:0,streak:0},
+  {id:155,kanji:"",kana:"そんなことありませんよ",meaning:"그렇지 않습니다",note:"",theme:"기초 표현",addedAt:155,quizCount:0,wrongCount:0,streak:0},
+  {id:156,kanji:"お祭り",kana:"おまつり",meaning:"마쓰리 / 축제",note:"",theme:"공휴일",addedAt:156,quizCount:0,wrongCount:0,streak:0},
+  {id:157,kanji:"体育祭",kana:"たいいくさい",meaning:"체육대회",note:"",theme:"교과목",addedAt:157,quizCount:0,wrongCount:0,streak:0},
+  {id:158,kanji:"",kana:"おめでとうございます",meaning:"축하합니다",note:"",theme:"기초 표현",addedAt:158,quizCount:0,wrongCount:0,streak:0},
+  {id:159,kanji:"",kana:"たんじょうび",meaning:"생일",note:"",theme:"기초 표현",addedAt:159,quizCount:0,wrongCount:0,streak:0},
+  {id:160,kanji:"",kana:"ついたち",meaning:"1일",note:"",theme:"날짜",addedAt:160,quizCount:0,wrongCount:0,streak:0},
+  {id:161,kanji:"",kana:"ふつか",meaning:"2일",note:"",theme:"날짜",addedAt:161,quizCount:0,wrongCount:0,streak:0},
+  {id:162,kanji:"",kana:"みっか",meaning:"3일",note:"",theme:"날짜",addedAt:162,quizCount:0,wrongCount:0,streak:0},
+  {id:163,kanji:"",kana:"よっか",meaning:"4일",note:"",theme:"날짜",addedAt:163,quizCount:0,wrongCount:0,streak:0},
+  {id:164,kanji:"",kana:"いつか",meaning:"5일",note:"",theme:"날짜",addedAt:164,quizCount:0,wrongCount:0,streak:0},
+  {id:165,kanji:"",kana:"むいか",meaning:"6일",note:"",theme:"날짜",addedAt:165,quizCount:0,wrongCount:0,streak:0},
+  {id:166,kanji:"",kana:"なのか",meaning:"7일",note:"",theme:"날짜",addedAt:166,quizCount:0,wrongCount:0,streak:0},
+  {id:167,kanji:"",kana:"ようか",meaning:"8일",note:"",theme:"날짜",addedAt:167,quizCount:0,wrongCount:0,streak:0},
+  {id:168,kanji:"",kana:"ここのか",meaning:"9일",note:"",theme:"날짜",addedAt:168,quizCount:0,wrongCount:0,streak:0},
+  {id:169,kanji:"",kana:"とおか",meaning:"10일",note:"",theme:"날짜",addedAt:169,quizCount:0,wrongCount:0,streak:0},
+  {id:170,kanji:"",kana:"-にち",meaning:"-일",note:"",theme:"날짜",addedAt:170,quizCount:0,wrongCount:0,streak:0},
+  {id:171,kanji:"",kana:"はつか",meaning:"20일",note:"",theme:"날짜",addedAt:171,quizCount:0,wrongCount:0,streak:0},
+  {id:172,kanji:"英語表現",kana:"えいごひょうげん",meaning:"영어표현",note:"",theme:"교과목",addedAt:172,quizCount:0,wrongCount:0,streak:0},
+  {id:173,kanji:"国語総合",kana:"こくごそうごう",meaning:"국어 종합",note:"",theme:"교과목",addedAt:173,quizCount:0,wrongCount:0,streak:0},
+  {id:174,kanji:"地学基礎",kana:"ちがくきそ",meaning:"지학 기초",note:"",theme:"교과목",addedAt:174,quizCount:0,wrongCount:0,streak:0},
+  {id:175,kanji:"情報科学",kana:"じょうほうかがく",meaning:"정보 과학",note:"",theme:"교과목",addedAt:175,quizCount:0,wrongCount:0,streak:0},
+  {id:176,kanji:"漢字",kana:"かんじ",meaning:"한자",note:"",theme:"교과목",addedAt:176,quizCount:0,wrongCount:0,streak:0},
+  {id:177,kanji:"地理",kana:"ちり",meaning:"지리",note:"",theme:"교과목",addedAt:177,quizCount:0,wrongCount:0,streak:0},
+  {id:178,kanji:"体育",kana:"たいいく",meaning:"체육",note:"",theme:"교과목",addedAt:178,quizCount:0,wrongCount:0,streak:0},
+  {id:179,kanji:"日本史",kana:"にほんし",meaning:"일본사",note:"",theme:"교과목",addedAt:179,quizCount:0,wrongCount:0,streak:0},
+  {id:180,kanji:"時間割",kana:"じかんわり",meaning:"시간표",note:"",theme:"교과목",addedAt:180,quizCount:0,wrongCount:0,streak:0},
+  {id:181,kanji:"数学",kana:"すうがく",meaning:"수학",note:"",theme:"교과목",addedAt:181,quizCount:0,wrongCount:0,streak:0},
+  {id:182,kanji:"理科",kana:"りか",meaning:"이과",note:"",theme:"교과목",addedAt:182,quizCount:0,wrongCount:0,streak:0},
+  {id:183,kanji:"芸術",kana:"げいじゅつ",meaning:"예술",note:"",theme:"교과목",addedAt:183,quizCount:0,wrongCount:0,streak:0},
+  {id:184,kanji:"生物基礎",kana:"せいぶつきそ",meaning:"생물 기초",note:"",theme:"교과목",addedAt:184,quizCount:0,wrongCount:0,streak:0},
+  {id:185,kanji:"保健",kana:"ほけん",meaning:"보건",note:"",theme:"교과목",addedAt:185,quizCount:0,wrongCount:0,streak:0},
+  {id:186,kanji:"音楽を聞くこと",kana:"おんがくをきくこと",meaning:"음악 듣기",note:"",theme:"취미",addedAt:186,quizCount:0,wrongCount:0,streak:0},
+  {id:187,kanji:"映画を見ること",kana:"えいがをみること",meaning:"영화 보기",note:"",theme:"취미",addedAt:187,quizCount:0,wrongCount:0,streak:0},
+  {id:188,kanji:"アニメを見ること",kana:"あにめをみること",meaning:"애니 보기",note:"",theme:"취미",addedAt:188,quizCount:0,wrongCount:0,streak:0},
+  {id:189,kanji:"",kana:"げーむをすること",meaning:"게임하기",note:"",theme:"취미",addedAt:189,quizCount:0,wrongCount:0,streak:0},
+  {id:190,kanji:"漫画を読むこと",kana:"まんがをよむこと",meaning:"만화 읽기",note:"",theme:"취미",addedAt:190,quizCount:0,wrongCount:0,streak:0},
+  {id:191,kanji:"",kana:"ダンス",meaning:"댄스",note:"",theme:"취미",addedAt:191,quizCount:0,wrongCount:0,streak:0},
+  {id:192,kanji:"",kana:"カラオケ",meaning:"노래방",note:"",theme:"취미",addedAt:192,quizCount:0,wrongCount:0,streak:0},
+  {id:193,kanji:"写真を撮ること",kana:"しゃしんをとること",meaning:"사진 찍기",note:"",theme:"취미",addedAt:193,quizCount:0,wrongCount:0,streak:0},
+  {id:194,kanji:"料理",kana:"りょうり",meaning:"요리",note:"",theme:"취미",addedAt:194,quizCount:0,wrongCount:0,streak:0},
+  {id:195,kanji:"ピアノを弾くこと",kana:"ぴあのをひくこと",meaning:"피아노 치기",note:"",theme:"취미",addedAt:195,quizCount:0,wrongCount:0,streak:0},
+  {id:196,kanji:"読書",kana:"どくしょ",meaning:"독서",note:"",theme:"취미",addedAt:196,quizCount:0,wrongCount:0,streak:0},
+  {id:197,kanji:"動画を見ること",kana:"どうがをみること",meaning:"영상 보기",note:"",theme:"취미",addedAt:197,quizCount:0,wrongCount:0,streak:0},
+  {id:198,kanji:"SNSを見ること",kana:"えすえぬえすをみること",meaning:"SNS 보기",note:"",theme:"취미",addedAt:198,quizCount:0,wrongCount:0,streak:0},
+  {id:199,kanji:"寝ること",kana:"ねること",meaning:"자는 것",note:"",theme:"취미",addedAt:199,quizCount:0,wrongCount:0,streak:0},
+  {id:200,kanji:"元日",kana:"がんじつ",meaning:"새해",note:"",theme:"공휴일",addedAt:200,quizCount:0,wrongCount:0,streak:0},
+  {id:201,kanji:"成人の日",kana:"せいじんのひ",meaning:"성인의 날",note:"",theme:"공휴일",addedAt:201,quizCount:0,wrongCount:0,streak:0},
+  {id:202,kanji:"建国記念日",kana:"けんこくきねんび",meaning:"건국기념일",note:"",theme:"공휴일",addedAt:202,quizCount:0,wrongCount:0,streak:0},
+  {id:203,kanji:"天皇誕生日",kana:"てんのうたんじょうび",meaning:"천황탄생일",note:"",theme:"공휴일",addedAt:203,quizCount:0,wrongCount:0,streak:0},
+  {id:204,kanji:"春分",kana:"しゅんぶん",meaning:"춘분",note:"",theme:"공휴일",addedAt:204,quizCount:0,wrongCount:0,streak:0},
+  {id:205,kanji:"昭和の日",kana:"しょうわのひ",meaning:"쇼와의 날",note:"",theme:"공휴일",addedAt:205,quizCount:0,wrongCount:0,streak:0},
+  {id:206,kanji:"憲法記念日",kana:"けんぽうきねんび",meaning:"헌법기념일",note:"",theme:"공휴일",addedAt:206,quizCount:0,wrongCount:0,streak:0},
+  {id:207,kanji:"みどりの日",kana:"みどりのひ",meaning:"녹색의 날",note:"",theme:"공휴일",addedAt:207,quizCount:0,wrongCount:0,streak:0},
+  {id:208,kanji:"子供の日",kana:"こどものひ",meaning:"어린이날",note:"",theme:"공휴일",addedAt:208,quizCount:0,wrongCount:0,streak:0},
+  {id:209,kanji:"海の日",kana:"うみのひ",meaning:"바다의 날",note:"",theme:"공휴일",addedAt:209,quizCount:0,wrongCount:0,streak:0},
+  {id:210,kanji:"山の日",kana:"やまのひ",meaning:"산의 날",note:"",theme:"공휴일",addedAt:210,quizCount:0,wrongCount:0,streak:0},
+  {id:211,kanji:"敬老の日",kana:"けいろうのひ",meaning:"경로의 날",note:"",theme:"공휴일",addedAt:211,quizCount:0,wrongCount:0,streak:0},
+  {id:212,kanji:"秋分の日",kana:"しゅうぶんのひ",meaning:"추분",note:"",theme:"공휴일",addedAt:212,quizCount:0,wrongCount:0,streak:0},
+  {id:213,kanji:"",kana:"スポーツ の日",meaning:"스포츠의 날",note:"",theme:"공휴일",addedAt:213,quizCount:0,wrongCount:0,streak:0},
+  {id:214,kanji:"文化の日",kana:"ぶんかのひ",meaning:"문화의 날",note:"",theme:"공휴일",addedAt:214,quizCount:0,wrongCount:0,streak:0},
+  {id:215,kanji:"勤労感謝の日",kana:"きんろうかんしゃのひ",meaning:"근로감사의 날",note:"",theme:"공휴일",addedAt:215,quizCount:0,wrongCount:0,streak:0},
+  {id:216,kanji:"入学式",kana:"にゅうがくしき",meaning:"입학식",note:"",theme:"학교행사",addedAt:216,quizCount:0,wrongCount:0,streak:0},
+  {id:217,kanji:"遠足",kana:"えんそく",meaning:"소풍",note:"",theme:"학교행사",addedAt:217,quizCount:0,wrongCount:0,streak:0},
+  {id:218,kanji:"試験・終業式",kana:"しけん・しゅうぎょうしき",meaning:"시험 및 종업식",note:"",theme:"학교생활",addedAt:218,quizCount:0,wrongCount:0,streak:0},
+  {id:219,kanji:"夏休み",kana:"なつやすみ",meaning:"여름방학",note:"",theme:"학교행사",addedAt:219,quizCount:0,wrongCount:0,streak:0},
+  {id:220,kanji:"部活動合宿",kana:"ぶかつどうがっしゅく",meaning:"부활동 합숙",note:"",theme:"학교행사",addedAt:220,quizCount:0,wrongCount:0,streak:0},
+  {id:221,kanji:"始業式・文化祭",kana:"しぎょうしき・ぶんかさい",meaning:"개학・학교축제",note:"",theme:"학교행사",addedAt:221,quizCount:0,wrongCount:0,streak:0},
+  {id:222,kanji:"進路説明会",kana:"しんろせつめいかい",meaning:"진로설명회",note:"",theme:"학교생활",addedAt:222,quizCount:0,wrongCount:0,streak:0},
+  {id:223,kanji:"修学旅行",kana:"しゅうがくりょこう",meaning:"수학여행",note:"",theme:"교과목",addedAt:223,quizCount:0,wrongCount:0,streak:0},
+  {id:224,kanji:"期末試験",kana:"きまつしけん",meaning:"기말고사, 겨울방학",note:"",theme:"학교행사",addedAt:224,quizCount:0,wrongCount:0,streak:0},
+  {id:225,kanji:"マラソン大会",kana:"まらそんたいかい",meaning:"마라톤",note:"",theme:"학교행사",addedAt:225,quizCount:0,wrongCount:0,streak:0},
+  {id:226,kanji:"卒業式",kana:"そつぎょうしき",meaning:"졸업식 및 봄방학",note:"",theme:"학교행사",addedAt:226,quizCount:0,wrongCount:0,streak:0},
+  {id:227,kanji:"春休み",kana:"はるやすみ",meaning:"봄방학",note:"",theme:"학교행사",addedAt:227,quizCount:0,wrongCount:0,streak:0},
+  {id:228,kanji:"サッカー部",kana:"さっかーぶ",meaning:"축구부",note:"",theme:"동아리",addedAt:228,quizCount:0,wrongCount:0,streak:0},
+  {id:229,kanji:"野球部",kana:"やきゅうぶ",meaning:"야구부",note:"",theme:"동아리",addedAt:229,quizCount:0,wrongCount:0,streak:0},
+  {id:230,kanji:"テニス部",kana:"てにすぶ",meaning:"테니스부",note:"",theme:"동아리",addedAt:230,quizCount:0,wrongCount:0,streak:0},
+  {id:231,kanji:"水泳部",kana:"すいえいぶ",meaning:"수영부",note:"",theme:"동아리",addedAt:231,quizCount:0,wrongCount:0,streak:0},
+  {id:232,kanji:"弓道部",kana:"きゅうどうぶ",meaning:"궁도부",note:"",theme:"동아리",addedAt:232,quizCount:0,wrongCount:0,streak:0},
+  {id:233,kanji:"剣道部",kana:"けんどうぶ",meaning:"검도부",note:"",theme:"동아리",addedAt:233,quizCount:0,wrongCount:0,streak:0},
+  {id:234,kanji:"吹奏楽部",kana:"すいそうがくぶ",meaning:"취주악부",note:"",theme:"동아리",addedAt:234,quizCount:0,wrongCount:0,streak:0},
+  {id:235,kanji:"書道部",kana:"しょどうぶ",meaning:"서예부",note:"",theme:"동아리",addedAt:235,quizCount:0,wrongCount:0,streak:0},
+  {id:236,kanji:"茶道部",kana:"さどうぶ",meaning:"다도부",note:"",theme:"동아리",addedAt:236,quizCount:0,wrongCount:0,streak:0},
+  {id:237,kanji:"帰宅部",kana:"きたくぶ",meaning:"귀가부(동아리 없음)",note:"",theme:"동아리",addedAt:237,quizCount:0,wrongCount:0,streak:0},
+  {id:238,kanji:"華道部",kana:"かどうぶ",meaning:"화도부",note:"",theme:"동아리",addedAt:238,quizCount:0,wrongCount:0,streak:0},
+  {id:239,kanji:"競技かるた部",kana:"きょうぎかるたぶ",meaning:"경기 카루타부",note:"",theme:"동아리",addedAt:239,quizCount:0,wrongCount:0,streak:0},
+  {id:240,kanji:"和太鼓部",kana:"わだいこぶ",meaning:"일본 북 동아리",note:"",theme:"동아리",addedAt:240,quizCount:0,wrongCount:0,streak:0},
+  {id:241,kanji:"鉄道研究部",kana:"てつどうけんきゅうぶ",meaning:"철도연구부",note:"",theme:"동아리",addedAt:241,quizCount:0,wrongCount:0,streak:0},
+  {id:242,kanji:"漫画研究部",kana:"まんがけんきゅうぶ",meaning:"만화연구부",note:"",theme:"동아리",addedAt:242,quizCount:0,wrongCount:0,streak:0},
+  {id:243,kanji:"高校生",kana:"こうこうせい",meaning:"고등학생",note:"",theme:"학교생활",addedAt:243,quizCount:0,wrongCount:0,streak:0},
+  {id:244,kanji:"制服",kana:"せいふく",meaning:"교복",note:"",theme:"학교생활",addedAt:244,quizCount:0,wrongCount:0,streak:0},
+  {id:245,kanji:"校則",kana:"こうそく",meaning:"교칙",note:"",theme:"학교생활",addedAt:245,quizCount:0,wrongCount:0,streak:0},
+  {id:246,kanji:"お弁当",kana:"おべんとう",meaning:"도시락",note:"",theme:"학교생활",addedAt:246,quizCount:0,wrongCount:0,streak:0},
+  {id:247,kanji:"売店",kana:"ばいてん",meaning:"매점",note:"",theme:"학교생활",addedAt:247,quizCount:0,wrongCount:0,streak:0},
+  {id:248,kanji:"後輩",kana:"こうはい",meaning:"후배",note:"",theme:"학교생활",addedAt:248,quizCount:0,wrongCount:0,streak:0},
+  {id:249,kanji:"先輩",kana:"せんぱい",meaning:"선배",note:"",theme:"학교생활",addedAt:249,quizCount:0,wrongCount:0,streak:0},
+  {id:250,kanji:"進路",kana:"しんろ",meaning:"진로",note:"",theme:"학교생활",addedAt:250,quizCount:0,wrongCount:0,streak:0},
+  {id:251,kanji:"受験",kana:"じゅけん",meaning:"수험",note:"",theme:"학교생활",addedAt:251,quizCount:0,wrongCount:0,streak:0},
+  {id:252,kanji:"成績",kana:"せいせき",meaning:"성적",note:"",theme:"학교생활",addedAt:252,quizCount:0,wrongCount:0,streak:0},
+  {id:253,kanji:"試験",kana:"しけん",meaning:"시험",note:"",theme:"학교생활",addedAt:253,quizCount:0,wrongCount:0,streak:0},
+  {id:254,kanji:"放課後",kana:"ほうかご",meaning:"방과 후",note:"",theme:"학교생활",addedAt:254,quizCount:0,wrongCount:0,streak:0},
+  {id:255,kanji:"遅刻",kana:"ちこく",meaning:"지각",note:"",theme:"학교생활",addedAt:255,quizCount:0,wrongCount:0,streak:0},
+  {id:256,kanji:"欠席",kana:"けっせき",meaning:"결석",note:"",theme:"학교생활",addedAt:256,quizCount:0,wrongCount:0,streak:0},
+  {id:257,kanji:"出席",kana:"しゅっせき",meaning:"출석",note:"",theme:"학교생활",addedAt:257,quizCount:0,wrongCount:0,streak:0},
+  {id:258,kanji:"登校",kana:"とうこう",meaning:"등교",note:"",theme:"학교생활",addedAt:258,quizCount:0,wrongCount:0,streak:0},
+  {id:259,kanji:"下校",kana:"げこう",meaning:"하교",note:"",theme:"학교생활",addedAt:259,quizCount:0,wrongCount:0,streak:0},
+  {id:260,kanji:"",kana:"さとう",meaning:"설탕",note:"",theme:"음식·식사",addedAt:260,quizCount:0,wrongCount:0,streak:0},
+  {id:261,kanji:"",kana:"しお",meaning:"소금",note:"",theme:"음식·식사",addedAt:261,quizCount:0,wrongCount:0,streak:0},
+  {id:262,kanji:"",kana:"す",meaning:"식초",note:"",theme:"음식·식사",addedAt:262,quizCount:0,wrongCount:0,streak:0},
+  {id:263,kanji:"",kana:"みそ",meaning:"된장",note:"",theme:"음식·식사",addedAt:263,quizCount:0,wrongCount:0,streak:0},
+  {id:264,kanji:"",kana:"はしのまなー",meaning:"젓가락 예절",note:"",theme:"음식·식사",addedAt:264,quizCount:0,wrongCount:0,streak:0},
+  {id:265,kanji:"小皿",kana:"こざら",meaning:"작은 접시",note:"",theme:"음식·식사",addedAt:265,quizCount:0,wrongCount:0,streak:0},
+  {id:266,kanji:"取り皿",kana:"とりざら",meaning:"덜어 먹는 접시",note:"",theme:"음식·식사",addedAt:266,quizCount:0,wrongCount:0,streak:0},
+  {id:267,kanji:"",kana:"いただきます",meaning:"잘 먹겠습니다",note:"",theme:"음식·식사",addedAt:267,quizCount:0,wrongCount:0,streak:0},
+  {id:268,kanji:"",kana:"ごちそうさまでした",meaning:"잘 먹었습니다",note:"",theme:"음식·식사",addedAt:268,quizCount:0,wrongCount:0,streak:0},
+  {id:269,kanji:"味噌汁",kana:"みそしる",meaning:"된장국",note:"",theme:"음식·식사",addedAt:269,quizCount:0,wrongCount:0,streak:0},
+  {id:270,kanji:"お代わり",kana:"おかわり",meaning:"리필, 한 그릇 더",note:"",theme:"음식·식사",addedAt:270,quizCount:0,wrongCount:0,streak:0},
+  {id:271,kanji:"",kana:"わたしばし",meaning:"젓가락 금기(가로 걸치기)",note:"",theme:"음식·식사",addedAt:271,quizCount:0,wrongCount:0,streak:0},
+  {id:272,kanji:"",kana:"なみだばし",meaning:"젓가락 금기(음식 떨어뜨리기)",note:"",theme:"음식·식사",addedAt:272,quizCount:0,wrongCount:0,streak:0},
+  {id:273,kanji:"",kana:"さしばし",meaning:"젓가락 금기(음식 찌르기)",note:"",theme:"음식·식사",addedAt:273,quizCount:0,wrongCount:0,streak:0},
+  {id:274,kanji:"",kana:"ねぶりばし",meaning:"젓가락 금기(핥기)",note:"",theme:"음식·식사",addedAt:274,quizCount:0,wrongCount:0,streak:0},
+  {id:275,kanji:"",kana:"つきばし",meaning:"젓가락 금기(그릇 옮기기)",note:"",theme:"음식·식사",addedAt:275,quizCount:0,wrongCount:0,streak:0},
+  {id:276,kanji:"",kana:"たてばし",meaning:"젓가락 금기(밥에 세우기)",note:"",theme:"음식·식사",addedAt:276,quizCount:0,wrongCount:0,streak:0},
+  {id:277,kanji:"",kana:"まわしばし",meaning:"젓가락 금기(나눠 먹기)",note:"",theme:"음식·식사",addedAt:277,quizCount:0,wrongCount:0,streak:0},
+  {id:278,kanji:"",kana:"よせばし",meaning:"젓가락 금기(그릇 당기기)",note:"",theme:"음식·식사",addedAt:278,quizCount:0,wrongCount:0,streak:0},
+  {id:279,kanji:"",kana:"ふりばし",meaning:"젓가락 금기(음식 털기)",note:"",theme:"음식·식사",addedAt:279,quizCount:0,wrongCount:0,streak:0},
+  {id:280,kanji:"",kana:"もぎばし",meaning:"젓가락 금기(밥알 떼기)",note:"",theme:"음식·식사",addedAt:280,quizCount:0,wrongCount:0,streak:0},
+  {id:281,kanji:"握り寿司",kana:"にぎりずし",meaning:"손으로 쥐어 만든 스시",note:"",theme:"음식·식사",addedAt:281,quizCount:0,wrongCount:0,streak:0},
+  {id:282,kanji:"稲荷寿司",kana:"いなりずし",meaning:"유부초밥",note:"",theme:"음식·식사",addedAt:282,quizCount:0,wrongCount:0,streak:0},
+  {id:283,kanji:"押し寿司",kana:"おしずし",meaning:"눌러서 만든 스시 (大阪 유명)",note:"",theme:"음식·식사",addedAt:283,quizCount:0,wrongCount:0,streak:0},
+  {id:284,kanji:"釜あげうどん",kana:"かまあげうどん",meaning:"삶은 우동 그대로 국물에 담가서 먹는 우동",note:"",theme:"음식·식사",addedAt:284,quizCount:0,wrongCount:0,streak:0},
+  {id:285,kanji:"",kana:"にこみうどん",meaning:"니코미 우동",note:"",theme:"음식·식사",addedAt:285,quizCount:0,wrongCount:0,streak:0},
+  {id:286,kanji:"",kana:"ひやしうどん",meaning:"히야시 우동 (냉우동)",note:"",theme:"음식·식사",addedAt:286,quizCount:0,wrongCount:0,streak:0},
+  {id:287,kanji:"",kana:"やきうどん",meaning:"야키 우동 (볶음우동)",note:"",theme:"음식·식사",addedAt:287,quizCount:0,wrongCount:0,streak:0},
+  {id:288,kanji:"",kana:"きつねうどん",meaning:"키쓰네 우동 (유부우동)",note:"",theme:"음식·식사",addedAt:288,quizCount:0,wrongCount:0,streak:0},
+  {id:289,kanji:"",kana:"たぬきうどん",meaning:"타누키 우동 (튀김 부스러기 우동)",note:"",theme:"음식·식사",addedAt:289,quizCount:0,wrongCount:0,streak:0},
+  {id:290,kanji:"",kana:"つきみうどん",meaning:"쓰키미 우동 (달걀 우동)",note:"",theme:"음식·식사",addedAt:290,quizCount:0,wrongCount:0,streak:0},
+  {id:291,kanji:"",kana:"ぎゅうどん",meaning:"규동 (소고기 덮밥)",note:"",theme:"음식·식사",addedAt:291,quizCount:0,wrongCount:0,streak:0},
+  {id:292,kanji:"",kana:"おやこどん",meaning:"오야코동 (닭고기·달걀 덮밥)",note:"",theme:"음식·식사",addedAt:292,quizCount:0,wrongCount:0,streak:0},
+  {id:293,kanji:"",kana:"てんどん",meaning:"텐동 (튀김 덮밥)",note:"",theme:"음식·식사",addedAt:293,quizCount:0,wrongCount:0,streak:0},
+  {id:294,kanji:"",kana:"てっかどん",meaning:"텟카동 (참치 덮밥)",note:"",theme:"음식·식사",addedAt:294,quizCount:0,wrongCount:0,streak:0},
+  {id:295,kanji:"",kana:"かつどん",meaning:"카쓰동 (돈가스 덮밥)",note:"",theme:"음식·식사",addedAt:295,quizCount:0,wrongCount:0,streak:0},
+  {id:296,kanji:"",kana:"たにんどん",meaning:"타닌동 (소고기·달걀 덮밥)",note:"",theme:"음식·식사",addedAt:296,quizCount:0,wrongCount:0,streak:0},
+  {id:297,kanji:"",kana:"ちゅうかどん",meaning:"쥬카동 (중국풍 덮밥)",note:"",theme:"음식·식사",addedAt:297,quizCount:0,wrongCount:0,streak:0},
+  {id:298,kanji:"",kana:"いくらどん",meaning:"이쿠라동 (연어알 덮밥)",note:"",theme:"음식·식사",addedAt:298,quizCount:0,wrongCount:0,streak:0},
+  {id:299,kanji:"",kana:"しおらーめん",meaning:"시오 라멘 (소금 라멘)",note:"",theme:"음식·식사",addedAt:299,quizCount:0,wrongCount:0,streak:0},
+  {id:300,kanji:"",kana:"しょうゆらーめん",meaning:"쇼유 라멘 (간장 라멘)",note:"",theme:"음식·식사",addedAt:300,quizCount:0,wrongCount:0,streak:0},
+  {id:301,kanji:"",kana:"みそらーめん",meaning:"미소 라멘 (된장 라멘)",note:"",theme:"음식·식사",addedAt:301,quizCount:0,wrongCount:0,streak:0},
+  {id:302,kanji:"",kana:"とんこつらーめん",meaning:"돈코쓰 라멘 (돼지뼈 라멘)",note:"",theme:"음식·식사",addedAt:302,quizCount:0,wrongCount:0,streak:0},
+  {id:303,kanji:"",kana:"えん",meaning:"엔 (일본 화폐 단위)",note:"",theme:"화폐·쇼핑",addedAt:303,quizCount:0,wrongCount:0,streak:0},
+  {id:304,kanji:"",kana:"いくらですか",meaning:"얼마예요?",note:"",theme:"화폐·쇼핑",addedAt:304,quizCount:0,wrongCount:0,streak:0},
+  {id:305,kanji:"",kana:"〜えんです",meaning:"〜엔이에요",note:"",theme:"화폐·쇼핑",addedAt:305,quizCount:0,wrongCount:0,streak:0},
+  {id:306,kanji:"お釣り",kana:"おつり",meaning:"거스름돈",note:"",theme:"화폐·쇼핑",addedAt:306,quizCount:0,wrongCount:0,streak:0},
+  {id:307,kanji:"",kana:"ぜんぶで",meaning:"전부 합쳐서",note:"",theme:"화폐·쇼핑",addedAt:307,quizCount:0,wrongCount:0,streak:0},
+  {id:308,kanji:"財布",kana:"さいふ",meaning:"지갑",note:"",theme:"화폐·쇼핑",addedAt:308,quizCount:0,wrongCount:0,streak:0},
+  {id:309,kanji:"",kana:"しょうひぜい",meaning:"소비세",note:"",theme:"화폐·쇼핑",addedAt:309,quizCount:0,wrongCount:0,streak:0},
+  {id:310,kanji:"",kana:"いち",meaning:"1",note:"",theme:"숫자",addedAt:310,quizCount:0,wrongCount:0,streak:0},
+  {id:311,kanji:"",kana:"に",meaning:"2",note:"",theme:"숫자",addedAt:311,quizCount:0,wrongCount:0,streak:0},
+  {id:312,kanji:"",kana:"さん",meaning:"3",note:"",theme:"숫자",addedAt:312,quizCount:0,wrongCount:0,streak:0},
+  {id:313,kanji:"",kana:"よん",meaning:"4",note:"",theme:"숫자",addedAt:313,quizCount:0,wrongCount:0,streak:0},
+  {id:314,kanji:"",kana:"ご",meaning:"5",note:"",theme:"숫자",addedAt:314,quizCount:0,wrongCount:0,streak:0},
+  {id:315,kanji:"",kana:"ろく",meaning:"6",note:"",theme:"숫자",addedAt:315,quizCount:0,wrongCount:0,streak:0},
+  {id:316,kanji:"",kana:"なな",meaning:"7",note:"",theme:"숫자",addedAt:316,quizCount:0,wrongCount:0,streak:0},
+  {id:317,kanji:"",kana:"はち",meaning:"8",note:"",theme:"숫자",addedAt:317,quizCount:0,wrongCount:0,streak:0},
+  {id:318,kanji:"",kana:"きゅう",meaning:"9",note:"",theme:"숫자",addedAt:318,quizCount:0,wrongCount:0,streak:0},
+  {id:319,kanji:"",kana:"じゅう",meaning:"10",note:"",theme:"숫자",addedAt:319,quizCount:0,wrongCount:0,streak:0},
+  {id:320,kanji:"",kana:"ひゃく",meaning:"100",note:"",theme:"숫자",addedAt:320,quizCount:0,wrongCount:0,streak:0},
+  {id:321,kanji:"",kana:"せん",meaning:"1000",note:"",theme:"숫자",addedAt:321,quizCount:0,wrongCount:0,streak:0},
+  {id:322,kanji:"",kana:"まん",meaning:"10000",note:"",theme:"숫자",addedAt:322,quizCount:0,wrongCount:0,streak:0},
+  {id:323,kanji:"",kana:"にじゅう",meaning:"20",note:"",theme:"숫자",addedAt:323,quizCount:0,wrongCount:0,streak:0},
+  {id:324,kanji:"",kana:"さんじゅう",meaning:"30",note:"",theme:"숫자",addedAt:324,quizCount:0,wrongCount:0,streak:0},
+  {id:325,kanji:"",kana:"よんじゅう",meaning:"40",note:"",theme:"숫자",addedAt:325,quizCount:0,wrongCount:0,streak:0},
+  {id:326,kanji:"",kana:"ごじゅう",meaning:"50",note:"",theme:"숫자",addedAt:326,quizCount:0,wrongCount:0,streak:0},
+  {id:327,kanji:"",kana:"ろくじゅう",meaning:"60",note:"",theme:"숫자",addedAt:327,quizCount:0,wrongCount:0,streak:0},
+  {id:328,kanji:"",kana:"ななじゅう",meaning:"70",note:"",theme:"숫자",addedAt:328,quizCount:0,wrongCount:0,streak:0},
+  {id:329,kanji:"",kana:"はちじゅう",meaning:"80",note:"",theme:"숫자",addedAt:329,quizCount:0,wrongCount:0,streak:0},
+  {id:330,kanji:"",kana:"きゅうじゅう",meaning:"90",note:"",theme:"숫자",addedAt:330,quizCount:0,wrongCount:0,streak:0},
+  {id:331,kanji:"",kana:"にひゃく",meaning:"200",note:"",theme:"숫자",addedAt:331,quizCount:0,wrongCount:0,streak:0},
+  {id:332,kanji:"",kana:"さんびゃく",meaning:"300",note:"",theme:"숫자",addedAt:332,quizCount:0,wrongCount:0,streak:0},
+  {id:333,kanji:"",kana:"よんひゃく",meaning:"400",note:"",theme:"숫자",addedAt:333,quizCount:0,wrongCount:0,streak:0},
+  {id:334,kanji:"",kana:"ごひゃく",meaning:"500",note:"",theme:"숫자",addedAt:334,quizCount:0,wrongCount:0,streak:0},
+  {id:335,kanji:"",kana:"ろっぴゃく",meaning:"600",note:"",theme:"숫자",addedAt:335,quizCount:0,wrongCount:0,streak:0},
+  {id:336,kanji:"",kana:"ななひゃく",meaning:"700",note:"",theme:"숫자",addedAt:336,quizCount:0,wrongCount:0,streak:0},
+  {id:337,kanji:"",kana:"はっぴゃく",meaning:"800",note:"",theme:"숫자",addedAt:337,quizCount:0,wrongCount:0,streak:0},
+  {id:338,kanji:"",kana:"きゅうひゃく",meaning:"900",note:"",theme:"숫자",addedAt:338,quizCount:0,wrongCount:0,streak:0},
+  {id:339,kanji:"",kana:"にせん",meaning:"2000",note:"",theme:"숫자",addedAt:339,quizCount:0,wrongCount:0,streak:0},
+  {id:340,kanji:"",kana:"さんぜん",meaning:"3000",note:"",theme:"숫자",addedAt:340,quizCount:0,wrongCount:0,streak:0},
+  {id:341,kanji:"",kana:"よんせん",meaning:"4000",note:"",theme:"숫자",addedAt:341,quizCount:0,wrongCount:0,streak:0},
+  {id:342,kanji:"",kana:"ごせん",meaning:"5000",note:"",theme:"숫자",addedAt:342,quizCount:0,wrongCount:0,streak:0},
+  {id:343,kanji:"",kana:"ろくせん",meaning:"6000",note:"",theme:"숫자",addedAt:343,quizCount:0,wrongCount:0,streak:0},
+  {id:344,kanji:"",kana:"ななせん",meaning:"7000",note:"",theme:"숫자",addedAt:344,quizCount:0,wrongCount:0,streak:0},
+  {id:345,kanji:"",kana:"はっせん",meaning:"8000",note:"",theme:"숫자",addedAt:345,quizCount:0,wrongCount:0,streak:0},
+  {id:346,kanji:"",kana:"きゅうせん",meaning:"9000",note:"",theme:"숫자",addedAt:346,quizCount:0,wrongCount:0,streak:0},
+  {id:347,kanji:"",kana:"ひとり",meaning:"1명",note:"",theme:"수사·조수사",addedAt:347,quizCount:0,wrongCount:0,streak:0},
+  {id:348,kanji:"",kana:"ふたり",meaning:"2명",note:"",theme:"수사·조수사",addedAt:348,quizCount:0,wrongCount:0,streak:0},
+  {id:349,kanji:"",kana:"さんにん",meaning:"3명",note:"",theme:"수사·조수사",addedAt:349,quizCount:0,wrongCount:0,streak:0},
+  {id:350,kanji:"",kana:"よにん",meaning:"4명",note:"",theme:"수사·조수사",addedAt:350,quizCount:0,wrongCount:0,streak:0},
+  {id:351,kanji:"",kana:"ごにん",meaning:"5명",note:"",theme:"수사·조수사",addedAt:351,quizCount:0,wrongCount:0,streak:0},
+  {id:352,kanji:"",kana:"ろくにん",meaning:"6명",note:"",theme:"수사·조수사",addedAt:352,quizCount:0,wrongCount:0,streak:0},
+  {id:353,kanji:"",kana:"しちにん",meaning:"7명",note:"",theme:"수사·조수사",addedAt:353,quizCount:0,wrongCount:0,streak:0},
+  {id:354,kanji:"",kana:"はちにん",meaning:"8명",note:"",theme:"수사·조수사",addedAt:354,quizCount:0,wrongCount:0,streak:0},
+  {id:355,kanji:"",kana:"きゅうにん",meaning:"9명",note:"",theme:"수사·조수사",addedAt:355,quizCount:0,wrongCount:0,streak:0},
+  {id:356,kanji:"",kana:"じゅうにん",meaning:"10명",note:"",theme:"수사·조수사",addedAt:356,quizCount:0,wrongCount:0,streak:0},
+  {id:357,kanji:"",kana:"なんにん",meaning:"몇 명",note:"",theme:"수사·조수사",addedAt:357,quizCount:0,wrongCount:0,streak:0},
+  {id:358,kanji:"",kana:"いちまい",meaning:"1장",note:"",theme:"수사·조수사",addedAt:358,quizCount:0,wrongCount:0,streak:0},
+  {id:359,kanji:"",kana:"にまい",meaning:"2장",note:"",theme:"수사·조수사",addedAt:359,quizCount:0,wrongCount:0,streak:0},
+  {id:360,kanji:"",kana:"さんまい",meaning:"3장",note:"",theme:"수사·조수사",addedAt:360,quizCount:0,wrongCount:0,streak:0},
+  {id:361,kanji:"",kana:"よんまい",meaning:"4장",note:"",theme:"수사·조수사",addedAt:361,quizCount:0,wrongCount:0,streak:0},
+  {id:362,kanji:"",kana:"ごまい",meaning:"5장",note:"",theme:"수사·조수사",addedAt:362,quizCount:0,wrongCount:0,streak:0},
+  {id:363,kanji:"",kana:"ろくまい",meaning:"6장",note:"",theme:"수사·조수사",addedAt:363,quizCount:0,wrongCount:0,streak:0},
+  {id:364,kanji:"",kana:"ななまい",meaning:"7장",note:"",theme:"수사·조수사",addedAt:364,quizCount:0,wrongCount:0,streak:0},
+  {id:365,kanji:"",kana:"はちまい",meaning:"8장",note:"",theme:"수사·조수사",addedAt:365,quizCount:0,wrongCount:0,streak:0},
+  {id:366,kanji:"",kana:"きゅうまい",meaning:"9장",note:"",theme:"수사·조수사",addedAt:366,quizCount:0,wrongCount:0,streak:0},
+  {id:367,kanji:"",kana:"じゅうまい",meaning:"10장",note:"",theme:"수사·조수사",addedAt:367,quizCount:0,wrongCount:0,streak:0},
+  {id:368,kanji:"",kana:"なんまい",meaning:"몇 장",note:"",theme:"수사·조수사",addedAt:368,quizCount:0,wrongCount:0,streak:0},
+  {id:369,kanji:"",kana:"いっぽん",meaning:"1자루",note:"",theme:"수사·조수사",addedAt:369,quizCount:0,wrongCount:0,streak:0},
+  {id:370,kanji:"",kana:"にほん",meaning:"2자루",note:"",theme:"수사·조수사",addedAt:370,quizCount:0,wrongCount:0,streak:0},
+  {id:371,kanji:"",kana:"さんぼん",meaning:"3자루",note:"",theme:"수사·조수사",addedAt:371,quizCount:0,wrongCount:0,streak:0},
+  {id:372,kanji:"",kana:"よんほん",meaning:"4자루",note:"",theme:"수사·조수사",addedAt:372,quizCount:0,wrongCount:0,streak:0},
+  {id:373,kanji:"",kana:"ごほん",meaning:"5자루",note:"",theme:"수사·조수사",addedAt:373,quizCount:0,wrongCount:0,streak:0},
+  {id:374,kanji:"",kana:"ろっぽん",meaning:"6자루",note:"",theme:"수사·조수사",addedAt:374,quizCount:0,wrongCount:0,streak:0},
+  {id:375,kanji:"",kana:"ななほん",meaning:"7자루",note:"",theme:"수사·조수사",addedAt:375,quizCount:0,wrongCount:0,streak:0},
+  {id:376,kanji:"",kana:"はっぽん",meaning:"8자루",note:"",theme:"수사·조수사",addedAt:376,quizCount:0,wrongCount:0,streak:0},
+  {id:377,kanji:"",kana:"きゅうほん",meaning:"9자루",note:"",theme:"수사·조수사",addedAt:377,quizCount:0,wrongCount:0,streak:0},
+  {id:378,kanji:"",kana:"じゅっぽん",meaning:"10자루",note:"",theme:"수사·조수사",addedAt:378,quizCount:0,wrongCount:0,streak:0},
+  {id:379,kanji:"",kana:"なんぼん",meaning:"몇 자루",note:"",theme:"수사·조수사",addedAt:379,quizCount:0,wrongCount:0,streak:0},
+  {id:380,kanji:"",kana:"いちじかん",meaning:"1시간",note:"",theme:"수사·조수사",addedAt:380,quizCount:0,wrongCount:0,streak:0},
+  {id:381,kanji:"",kana:"にじかん",meaning:"2시간",note:"",theme:"수사·조수사",addedAt:381,quizCount:0,wrongCount:0,streak:0},
+  {id:382,kanji:"",kana:"さんじかん",meaning:"3시간",note:"",theme:"수사·조수사",addedAt:382,quizCount:0,wrongCount:0,streak:0},
+  {id:383,kanji:"",kana:"よじかん",meaning:"4시간",note:"",theme:"수사·조수사",addedAt:383,quizCount:0,wrongCount:0,streak:0},
+  {id:384,kanji:"",kana:"ごじかん",meaning:"5시간",note:"",theme:"수사·조수사",addedAt:384,quizCount:0,wrongCount:0,streak:0},
+  {id:385,kanji:"",kana:"ろくじかん",meaning:"6시간",note:"",theme:"수사·조수사",addedAt:385,quizCount:0,wrongCount:0,streak:0},
+  {id:386,kanji:"",kana:"しちじかん",meaning:"7시간",note:"",theme:"수사·조수사",addedAt:386,quizCount:0,wrongCount:0,streak:0},
+  {id:387,kanji:"",kana:"はちじかん",meaning:"8시간",note:"",theme:"수사·조수사",addedAt:387,quizCount:0,wrongCount:0,streak:0},
+  {id:388,kanji:"",kana:"きゅうじかん",meaning:"9시간",note:"",theme:"수사·조수사",addedAt:388,quizCount:0,wrongCount:0,streak:0},
+  {id:389,kanji:"",kana:"じゅうじかん",meaning:"10시간",note:"",theme:"수사·조수사",addedAt:389,quizCount:0,wrongCount:0,streak:0},
+  {id:390,kanji:"",kana:"なんじかん",meaning:"몇 시간",note:"",theme:"수사·조수사",addedAt:390,quizCount:0,wrongCount:0,streak:0},
+  {id:391,kanji:"",kana:"いっしゅうかん",meaning:"1주일",note:"",theme:"수사·조수사",addedAt:391,quizCount:0,wrongCount:0,streak:0},
+  {id:392,kanji:"",kana:"にしゅうかん",meaning:"2주일",note:"",theme:"수사·조수사",addedAt:392,quizCount:0,wrongCount:0,streak:0},
+  {id:393,kanji:"",kana:"さんしゅうかん",meaning:"3주일",note:"",theme:"수사·조수사",addedAt:393,quizCount:0,wrongCount:0,streak:0},
+  {id:394,kanji:"",kana:"よんしゅうかん",meaning:"4주일",note:"",theme:"수사·조수사",addedAt:394,quizCount:0,wrongCount:0,streak:0},
+  {id:395,kanji:"",kana:"ごしゅうかん",meaning:"5주일",note:"",theme:"수사·조수사",addedAt:395,quizCount:0,wrongCount:0,streak:0},
+  {id:396,kanji:"",kana:"ろくしゅうかん",meaning:"6주일",note:"",theme:"수사·조수사",addedAt:396,quizCount:0,wrongCount:0,streak:0},
+  {id:397,kanji:"",kana:"ななしゅうかん",meaning:"7주일",note:"",theme:"수사·조수사",addedAt:397,quizCount:0,wrongCount:0,streak:0},
+  {id:398,kanji:"",kana:"はっしゅうかん",meaning:"8주일",note:"",theme:"수사·조수사",addedAt:398,quizCount:0,wrongCount:0,streak:0},
+  {id:399,kanji:"",kana:"きゅうしゅうかん",meaning:"9주일",note:"",theme:"수사·조수사",addedAt:399,quizCount:0,wrongCount:0,streak:0},
+  {id:400,kanji:"",kana:"じゅっしゅうかん",meaning:"10주일",note:"",theme:"수사·조수사",addedAt:400,quizCount:0,wrongCount:0,streak:0},
+  {id:401,kanji:"",kana:"なんしゅうかん",meaning:"몇 주일",note:"",theme:"수사·조수사",addedAt:401,quizCount:0,wrongCount:0,streak:0},
+  {id:402,kanji:"",kana:"いっかげつ",meaning:"1개월",note:"",theme:"수사·조수사",addedAt:402,quizCount:0,wrongCount:0,streak:0},
+  {id:403,kanji:"",kana:"にかげつ",meaning:"2개월",note:"",theme:"수사·조수사",addedAt:403,quizCount:0,wrongCount:0,streak:0},
+  {id:404,kanji:"",kana:"さんかげつ",meaning:"3개월",note:"",theme:"수사·조수사",addedAt:404,quizCount:0,wrongCount:0,streak:0},
+  {id:405,kanji:"",kana:"よんかげつ",meaning:"4개월",note:"",theme:"수사·조수사",addedAt:405,quizCount:0,wrongCount:0,streak:0},
+  {id:406,kanji:"",kana:"ごかげつ",meaning:"5개월",note:"",theme:"수사·조수사",addedAt:406,quizCount:0,wrongCount:0,streak:0},
+  {id:407,kanji:"",kana:"ろっかげつ",meaning:"6개월",note:"",theme:"수사·조수사",addedAt:407,quizCount:0,wrongCount:0,streak:0},
+  {id:408,kanji:"",kana:"ななかげつ",meaning:"7개월",note:"",theme:"수사·조수사",addedAt:408,quizCount:0,wrongCount:0,streak:0},
+  {id:409,kanji:"",kana:"はっかげつ",meaning:"8개월",note:"",theme:"수사·조수사",addedAt:409,quizCount:0,wrongCount:0,streak:0},
+  {id:410,kanji:"",kana:"きゅうかげつ",meaning:"9개월",note:"",theme:"수사·조수사",addedAt:410,quizCount:0,wrongCount:0,streak:0},
+  {id:411,kanji:"",kana:"じゅっかげつ",meaning:"10개월",note:"",theme:"수사·조수사",addedAt:411,quizCount:0,wrongCount:0,streak:0},
+  {id:412,kanji:"",kana:"なんかげつ",meaning:"몇 개월",note:"",theme:"수사·조수사",addedAt:412,quizCount:0,wrongCount:0,streak:0},
+  {id:413,kanji:"",kana:"いっさい",meaning:"1살",note:"",theme:"수사·조수사",addedAt:413,quizCount:0,wrongCount:0,streak:0},
+  {id:414,kanji:"",kana:"にさい",meaning:"2살",note:"",theme:"수사·조수사",addedAt:414,quizCount:0,wrongCount:0,streak:0},
+  {id:415,kanji:"",kana:"さんさい",meaning:"3살",note:"",theme:"수사·조수사",addedAt:415,quizCount:0,wrongCount:0,streak:0},
+  {id:416,kanji:"",kana:"よんさい",meaning:"4살",note:"",theme:"수사·조수사",addedAt:416,quizCount:0,wrongCount:0,streak:0},
+  {id:417,kanji:"",kana:"ごさい",meaning:"5살",note:"",theme:"수사·조수사",addedAt:417,quizCount:0,wrongCount:0,streak:0},
+  {id:418,kanji:"",kana:"ろくさい",meaning:"6살",note:"",theme:"수사·조수사",addedAt:418,quizCount:0,wrongCount:0,streak:0},
+  {id:419,kanji:"",kana:"ななさい",meaning:"7살",note:"",theme:"수사·조수사",addedAt:419,quizCount:0,wrongCount:0,streak:0},
+  {id:420,kanji:"",kana:"はっさい",meaning:"8살",note:"",theme:"수사·조수사",addedAt:420,quizCount:0,wrongCount:0,streak:0},
+  {id:421,kanji:"",kana:"きゅうさい",meaning:"9살",note:"",theme:"수사·조수사",addedAt:421,quizCount:0,wrongCount:0,streak:0},
+  {id:422,kanji:"",kana:"じゅっさい",meaning:"10살",note:"",theme:"수사·조수사",addedAt:422,quizCount:0,wrongCount:0,streak:0},
+  {id:423,kanji:"",kana:"なんさい",meaning:"몇 살",note:"",theme:"수사·조수사",addedAt:423,quizCount:0,wrongCount:0,streak:0},
+  {id:424,kanji:"",kana:"いっかい",meaning:"1층/1번",note:"",theme:"수사·조수사",addedAt:424,quizCount:0,wrongCount:0,streak:0},
+  {id:425,kanji:"",kana:"にかい",meaning:"2층/2번",note:"",theme:"수사·조수사",addedAt:425,quizCount:0,wrongCount:0,streak:0},
+  {id:426,kanji:"",kana:"さんがい",meaning:"3층",note:"",theme:"수사·조수사",addedAt:426,quizCount:0,wrongCount:0,streak:0},
+  {id:427,kanji:"",kana:"よんかい",meaning:"4층/4번",note:"",theme:"수사·조수사",addedAt:427,quizCount:0,wrongCount:0,streak:0},
+  {id:428,kanji:"",kana:"ごかい",meaning:"5층/5번",note:"",theme:"수사·조수사",addedAt:428,quizCount:0,wrongCount:0,streak:0},
+  {id:429,kanji:"",kana:"ろっかい",meaning:"6층/6번",note:"",theme:"수사·조수사",addedAt:429,quizCount:0,wrongCount:0,streak:0},
+  {id:430,kanji:"",kana:"ななかい",meaning:"7층/7번",note:"",theme:"수사·조수사",addedAt:430,quizCount:0,wrongCount:0,streak:0},
+  {id:431,kanji:"",kana:"はっかい",meaning:"8층/8번",note:"",theme:"수사·조수사",addedAt:431,quizCount:0,wrongCount:0,streak:0},
+  {id:432,kanji:"",kana:"きゅうかい",meaning:"9층/9번",note:"",theme:"수사·조수사",addedAt:432,quizCount:0,wrongCount:0,streak:0},
+  {id:433,kanji:"",kana:"じゅっかい",meaning:"10층/10번",note:"",theme:"수사·조수사",addedAt:433,quizCount:0,wrongCount:0,streak:0},
+  {id:434,kanji:"",kana:"なんがい",meaning:"몇 층",note:"",theme:"수사·조수사",addedAt:434,quizCount:0,wrongCount:0,streak:0},
+  {id:435,kanji:"",kana:"いっこ",meaning:"1개(個)",note:"",theme:"수사·조수사",addedAt:435,quizCount:0,wrongCount:0,streak:0},
+  {id:436,kanji:"",kana:"にこ",meaning:"2개(個)",note:"",theme:"수사·조수사",addedAt:436,quizCount:0,wrongCount:0,streak:0},
+  {id:437,kanji:"",kana:"さんこ",meaning:"3개(個)",note:"",theme:"수사·조수사",addedAt:437,quizCount:0,wrongCount:0,streak:0},
+  {id:438,kanji:"",kana:"よんこ",meaning:"4개(個)",note:"",theme:"수사·조수사",addedAt:438,quizCount:0,wrongCount:0,streak:0},
+  {id:439,kanji:"",kana:"ごこ",meaning:"5개(個)",note:"",theme:"수사·조수사",addedAt:439,quizCount:0,wrongCount:0,streak:0},
+  {id:440,kanji:"",kana:"ろっこ",meaning:"6개(個)",note:"",theme:"수사·조수사",addedAt:440,quizCount:0,wrongCount:0,streak:0},
+  {id:441,kanji:"",kana:"ななこ",meaning:"7개(個)",note:"",theme:"수사·조수사",addedAt:441,quizCount:0,wrongCount:0,streak:0},
+  {id:442,kanji:"",kana:"はっこ",meaning:"8개(個)",note:"",theme:"수사·조수사",addedAt:442,quizCount:0,wrongCount:0,streak:0},
+  {id:443,kanji:"",kana:"きゅうこ",meaning:"9개(個)",note:"",theme:"수사·조수사",addedAt:443,quizCount:0,wrongCount:0,streak:0},
+  {id:444,kanji:"",kana:"じゅっこ",meaning:"10개(個)",note:"",theme:"수사·조수사",addedAt:444,quizCount:0,wrongCount:0,streak:0},
+  {id:445,kanji:"",kana:"なんこ",meaning:"몇 개(個)",note:"",theme:"수사·조수사",addedAt:445,quizCount:0,wrongCount:0,streak:0},
+  {id:446,kanji:"",kana:"いっぱい",meaning:"1잔",note:"",theme:"수사·조수사",addedAt:446,quizCount:0,wrongCount:0,streak:0},
+  {id:447,kanji:"",kana:"にはい",meaning:"2잔",note:"",theme:"수사·조수사",addedAt:447,quizCount:0,wrongCount:0,streak:0},
+  {id:448,kanji:"",kana:"さんばい",meaning:"3잔",note:"",theme:"수사·조수사",addedAt:448,quizCount:0,wrongCount:0,streak:0},
+  {id:449,kanji:"",kana:"よんはい",meaning:"4잔",note:"",theme:"수사·조수사",addedAt:449,quizCount:0,wrongCount:0,streak:0},
+  {id:450,kanji:"",kana:"ごはい",meaning:"5잔",note:"",theme:"수사·조수사",addedAt:450,quizCount:0,wrongCount:0,streak:0},
+  {id:451,kanji:"",kana:"ろっぱい",meaning:"6잔",note:"",theme:"수사·조수사",addedAt:451,quizCount:0,wrongCount:0,streak:0},
+  {id:452,kanji:"",kana:"ななはい",meaning:"7잔",note:"",theme:"수사·조수사",addedAt:452,quizCount:0,wrongCount:0,streak:0},
+  {id:453,kanji:"",kana:"はっぱい",meaning:"8잔",note:"",theme:"수사·조수사",addedAt:453,quizCount:0,wrongCount:0,streak:0},
+  {id:454,kanji:"",kana:"きゅうはい",meaning:"9잔",note:"",theme:"수사·조수사",addedAt:454,quizCount:0,wrongCount:0,streak:0},
+  {id:455,kanji:"",kana:"じゅっぱい",meaning:"10잔",note:"",theme:"수사·조수사",addedAt:455,quizCount:0,wrongCount:0,streak:0},
+  {id:456,kanji:"",kana:"なんばい",meaning:"몇 잔",note:"",theme:"수사·조수사",addedAt:456,quizCount:0,wrongCount:0,streak:0},
+  {id:457,kanji:"部活",kana:"ぶかつ",meaning:"동아리/부활동",note:"",theme:"학교행사",addedAt:457,quizCount:0,wrongCount:0,streak:0},
+  {id:458,kanji:"優しい",kana:"やさしい",meaning:"상냥하다",note:"",theme:"형용사",addedAt:458,quizCount:0,wrongCount:0,streak:0},
+  {id:459,kanji:"嬉しい",kana:"うれしい",meaning:"기쁘다",note:"",theme:"형용사",addedAt:459,quizCount:0,wrongCount:0,streak:0},
+  {id:460,kanji:"悲しい",kana:"かなしい",meaning:"슬프다",note:"",theme:"형용사",addedAt:460,quizCount:0,wrongCount:0,streak:0},
+  {id:461,kanji:"寂しい",kana:"さびしい",meaning:"외롭다",note:"",theme:"형용사",addedAt:461,quizCount:0,wrongCount:0,streak:0},
+  {id:462,kanji:"恥ずかしい",kana:"はずかしい",meaning:"부끄럽다",note:"",theme:"형용사",addedAt:462,quizCount:0,wrongCount:0,streak:0},
+  {id:463,kanji:"忙しい",kana:"いそがしい",meaning:"바쁘다",note:"",theme:"형용사",addedAt:463,quizCount:0,wrongCount:0,streak:0},
+  {id:464,kanji:"珍しい",kana:"めずらしい",meaning:"드물다",note:"",theme:"형용사",addedAt:464,quizCount:0,wrongCount:0,streak:0},
+  {id:465,kanji:"厳しい",kana:"きびしい",meaning:"엄격하다",note:"",theme:"형용사",addedAt:465,quizCount:0,wrongCount:0,streak:0},
+  {id:466,kanji:"涼しい",kana:"すずしい",meaning:"시원하다",note:"",theme:"형용사",addedAt:466,quizCount:0,wrongCount:0,streak:0},
+  {id:467,kanji:"暑苦しい",kana:"あつくるしい",meaning:"답답하게 덥다",note:"",theme:"형용사",addedAt:467,quizCount:0,wrongCount:0,streak:0},
+  {id:468,kanji:"怖い",kana:"こわい",meaning:"무섭다",note:"",theme:"형용사",addedAt:468,quizCount:0,wrongCount:0,streak:0},
+  {id:469,kanji:"細かい",kana:"こまかい",meaning:"세밀하다",note:"",theme:"형용사",addedAt:469,quizCount:0,wrongCount:0,streak:0},
+  {id:470,kanji:"温かい",kana:"あたたかい",meaning:"따뜻하다",note:"",theme:"형용사",addedAt:470,quizCount:0,wrongCount:0,streak:0},
+  {id:471,kanji:"暖かい",kana:"あたたかい",meaning:"따뜻하다",note:"",theme:"형용사",addedAt:471,quizCount:0,wrongCount:0,streak:0},
+  {id:472,kanji:"冷たい",kana:"つめたい",meaning:"차갑다",note:"",theme:"형용사",addedAt:472,quizCount:0,wrongCount:0,streak:0},
+  {id:473,kanji:"眠い",kana:"ねむい",meaning:"졸리다",note:"",theme:"형용사",addedAt:473,quizCount:0,wrongCount:0,streak:0},
+  {id:474,kanji:"痒い",kana:"かゆい",meaning:"가렵다",note:"",theme:"형용사",addedAt:474,quizCount:0,wrongCount:0,streak:0},
+  {id:475,kanji:"羨ましい",kana:"うらやましい",meaning:"부럽다",note:"",theme:"형용사",addedAt:475,quizCount:0,wrongCount:0,streak:0},
+  {id:476,kanji:"懐かしい",kana:"なつかしい",meaning:"그립다",note:"",theme:"형용사",addedAt:476,quizCount:0,wrongCount:0,streak:0},
+  {id:477,kanji:"怪しい",kana:"あやしい",meaning:"수상하다",note:"",theme:"형용사",addedAt:477,quizCount:0,wrongCount:0,streak:0},
+  {id:478,kanji:"面倒くさい",kana:"めんどうくさい",meaning:"귀찮다",note:"",theme:"형용사",addedAt:478,quizCount:0,wrongCount:0,streak:0},
+  {id:479,kanji:"暑い",kana:"あつい",meaning:"덥다",note:"",theme:"기초 표현",addedAt:479,quizCount:0,wrongCount:0,streak:0},
+  {id:480,kanji:"熱い",kana:"あつい",meaning:"뜨겁다",note:"",theme:"형용사",addedAt:480,quizCount:0,wrongCount:0,streak:0},
+  {id:481,kanji:"厚い",kana:"あつい",meaning:"두껍다",note:"",theme:"형용사",addedAt:481,quizCount:0,wrongCount:0,streak:0},
+  {id:482,kanji:"早い",kana:"はやい",meaning:"이르다",note:"",theme:"형용사",addedAt:482,quizCount:0,wrongCount:0,streak:0},
+  {id:483,kanji:"速い",kana:"はやい",meaning:"빠르다",note:"",theme:"형용사",addedAt:483,quizCount:0,wrongCount:0,streak:0},
+  {id:484,kanji:"辛い",kana:"つらい",meaning:"괴롭다",note:"",theme:"형용사",addedAt:484,quizCount:0,wrongCount:0,streak:0},
+  {id:485,kanji:"若い",kana:"わかい",meaning:"젊다",note:"",theme:"형용사",addedAt:485,quizCount:0,wrongCount:0,streak:0},
+  {id:486,kanji:"赤い",kana:"あかい",meaning:"빨갛다",note:"",theme:"형용사",addedAt:486,quizCount:0,wrongCount:0,streak:0},
+  {id:487,kanji:"青い",kana:"あおい",meaning:"파랗다",note:"",theme:"형용사",addedAt:487,quizCount:0,wrongCount:0,streak:0},
+  {id:488,kanji:"白い",kana:"しろい",meaning:"하얗다",note:"",theme:"형용사",addedAt:488,quizCount:0,wrongCount:0,streak:0},
+  {id:489,kanji:"黒い",kana:"くろい",meaning:"검다",note:"",theme:"형용사",addedAt:489,quizCount:0,wrongCount:0,streak:0},
+  {id:490,kanji:"丸い",kana:"まるい",meaning:"둥글다",note:"",theme:"형용사",addedAt:490,quizCount:0,wrongCount:0,streak:0},
+  {id:491,kanji:"四角い",kana:"しかくい",meaning:"네모나다",note:"",theme:"형용사",addedAt:491,quizCount:0,wrongCount:0,streak:0},
+  {id:492,kanji:"柔らかい",kana:"やわらかい",meaning:"부드럽다",note:"",theme:"형용사",addedAt:492,quizCount:0,wrongCount:0,streak:0},
+  {id:493,kanji:"固い",kana:"かたい",meaning:"굳다, 딱딱하다",note:"",theme:"형용사",addedAt:493,quizCount:0,wrongCount:0,streak:0},
+  {id:494,kanji:"硬い",kana:"かたい",meaning:"단단하다",note:"",theme:"형용사",addedAt:494,quizCount:0,wrongCount:0,streak:0},
+  {id:495,kanji:"堅い",kana:"かたい",meaning:"엄격하다, 견실하다",note:"",theme:"형용사",addedAt:495,quizCount:0,wrongCount:0,streak:0},
+  {id:496,kanji:"浅い",kana:"あさい",meaning:"얕다",note:"",theme:"형용사",addedAt:496,quizCount:0,wrongCount:0,streak:0},
+  {id:497,kanji:"深い",kana:"ふかい",meaning:"깊다",note:"",theme:"형용사",addedAt:497,quizCount:0,wrongCount:0,streak:0},
+  {id:498,kanji:"遠い",kana:"とおい",meaning:"멀다",note:"",theme:"형용사",addedAt:498,quizCount:0,wrongCount:0,streak:0},
+  {id:499,kanji:"近い",kana:"ちかい",meaning:"가깝다",note:"",theme:"형용사",addedAt:499,quizCount:0,wrongCount:0,streak:0},
+  {id:500,kanji:"明るい",kana:"あかるい",meaning:"밝다",note:"",theme:"형용사",addedAt:500,quizCount:0,wrongCount:0,streak:0},
+  {id:501,kanji:"暗い",kana:"くらい",meaning:"어둡다",note:"",theme:"형용사",addedAt:501,quizCount:0,wrongCount:0,streak:0},
+  {id:502,kanji:"甘い",kana:"あまい",meaning:"달다",note:"",theme:"형용사",addedAt:502,quizCount:0,wrongCount:0,streak:0},
+  {id:503,kanji:"粗い",kana:"あらい",meaning:"거칠다",note:"",theme:"형용사",addedAt:503,quizCount:0,wrongCount:0,streak:0},
+  {id:504,kanji:"荒い",kana:"あらい",meaning:"거칠다",note:"",theme:"형용사",addedAt:504,quizCount:0,wrongCount:0,streak:0},
+  {id:505,kanji:"北海道",kana:"ほっかいどう",meaning:"홋카이도",note:"",theme:"일본 지리",addedAt:505,quizCount:0,wrongCount:0,streak:0},
+  {id:506,kanji:"青森県",kana:"あおもりけん",meaning:"아오모리현",note:"",theme:"일본 지리",addedAt:506,quizCount:0,wrongCount:0,streak:0},
+  {id:507,kanji:"岩手県",kana:"いわてけん",meaning:"이와테현",note:"",theme:"일본 지리",addedAt:507,quizCount:0,wrongCount:0,streak:0},
+  {id:508,kanji:"宮城県",kana:"みやぎけん",meaning:"미야기현",note:"",theme:"일본 지리",addedAt:508,quizCount:0,wrongCount:0,streak:0},
+  {id:509,kanji:"秋田県",kana:"あきたけん",meaning:"아키타현",note:"",theme:"일본 지리",addedAt:509,quizCount:0,wrongCount:0,streak:0},
+  {id:510,kanji:"山形県",kana:"やまがたけん",meaning:"야마가타현",note:"",theme:"일본 지리",addedAt:510,quizCount:0,wrongCount:0,streak:0},
+  {id:511,kanji:"福島県",kana:"ふくしまけん",meaning:"후쿠시마현",note:"",theme:"일본 지리",addedAt:511,quizCount:0,wrongCount:0,streak:0},
+  {id:512,kanji:"茨城県",kana:"いばらきけん",meaning:"이바라키현",note:"",theme:"일본 지리",addedAt:512,quizCount:0,wrongCount:0,streak:0},
+  {id:513,kanji:"栃木県",kana:"とちぎけん",meaning:"도치기현",note:"",theme:"일본 지리",addedAt:513,quizCount:0,wrongCount:0,streak:0},
+  {id:514,kanji:"群馬県",kana:"ぐんまけん",meaning:"군마현",note:"",theme:"일본 지리",addedAt:514,quizCount:0,wrongCount:0,streak:0},
+  {id:515,kanji:"埼玉県",kana:"さいたまけん",meaning:"사이타마현",note:"",theme:"일본 지리",addedAt:515,quizCount:0,wrongCount:0,streak:0},
+  {id:516,kanji:"千葉県",kana:"ちばけん",meaning:"지바현",note:"",theme:"일본 지리",addedAt:516,quizCount:0,wrongCount:0,streak:0},
+  {id:517,kanji:"東京都",kana:"とうきょうと",meaning:"도쿄도",note:"",theme:"일본 지리",addedAt:517,quizCount:0,wrongCount:0,streak:0},
+  {id:518,kanji:"神奈川県",kana:"かながわけん",meaning:"가나가와현",note:"",theme:"일본 지리",addedAt:518,quizCount:0,wrongCount:0,streak:0},
+  {id:519,kanji:"新潟県",kana:"にいがたけん",meaning:"니가타현",note:"",theme:"일본 지리",addedAt:519,quizCount:0,wrongCount:0,streak:0},
+  {id:520,kanji:"富山県",kana:"とやまけん",meaning:"도야마현",note:"",theme:"일본 지리",addedAt:520,quizCount:0,wrongCount:0,streak:0},
+  {id:521,kanji:"石川県",kana:"いしかわけん",meaning:"이시카와현",note:"",theme:"일본 지리",addedAt:521,quizCount:0,wrongCount:0,streak:0},
+  {id:522,kanji:"福井県",kana:"ふくいけん",meaning:"후쿠이현",note:"",theme:"일본 지리",addedAt:522,quizCount:0,wrongCount:0,streak:0},
+  {id:523,kanji:"山梨県",kana:"やまなしけん",meaning:"야마나시현",note:"",theme:"일본 지리",addedAt:523,quizCount:0,wrongCount:0,streak:0},
+  {id:524,kanji:"長野県",kana:"ながのけん",meaning:"나가노현",note:"",theme:"일본 지리",addedAt:524,quizCount:0,wrongCount:0,streak:0},
+  {id:525,kanji:"岐阜県",kana:"ぎふけん",meaning:"기후현",note:"",theme:"일본 지리",addedAt:525,quizCount:0,wrongCount:0,streak:0},
+  {id:526,kanji:"静岡県",kana:"しずおかけん",meaning:"시즈오카현",note:"",theme:"일본 지리",addedAt:526,quizCount:0,wrongCount:0,streak:0},
+  {id:527,kanji:"愛知県",kana:"あいちけん",meaning:"아이치현",note:"",theme:"일본 지리",addedAt:527,quizCount:0,wrongCount:0,streak:0},
+  {id:528,kanji:"三重県",kana:"みえけん",meaning:"미에현",note:"",theme:"일본 지리",addedAt:528,quizCount:0,wrongCount:0,streak:0},
+  {id:529,kanji:"滋賀県",kana:"しがけん",meaning:"시가현",note:"",theme:"일본 지리",addedAt:529,quizCount:0,wrongCount:0,streak:0},
+  {id:530,kanji:"京都府",kana:"きょうとふ",meaning:"교토부",note:"",theme:"일본 지리",addedAt:530,quizCount:0,wrongCount:0,streak:0},
+  {id:531,kanji:"大阪府",kana:"おおさかふ",meaning:"오사카부",note:"",theme:"일본 지리",addedAt:531,quizCount:0,wrongCount:0,streak:0},
+  {id:532,kanji:"兵庫県",kana:"ひょうごけん",meaning:"효고현",note:"",theme:"일본 지리",addedAt:532,quizCount:0,wrongCount:0,streak:0},
+  {id:533,kanji:"奈良県",kana:"ならけん",meaning:"나라현",note:"",theme:"일본 지리",addedAt:533,quizCount:0,wrongCount:0,streak:0},
+  {id:534,kanji:"和歌山県",kana:"わかやまけん",meaning:"와카야마현",note:"",theme:"일본 지리",addedAt:534,quizCount:0,wrongCount:0,streak:0},
+  {id:535,kanji:"鳥取県",kana:"とっとりけん",meaning:"돗토리현",note:"",theme:"일본 지리",addedAt:535,quizCount:0,wrongCount:0,streak:0},
+  {id:536,kanji:"島根県",kana:"しまねけん",meaning:"시마네현",note:"",theme:"일본 지리",addedAt:536,quizCount:0,wrongCount:0,streak:0},
+  {id:537,kanji:"岡山県",kana:"おかやまけん",meaning:"오카야마현",note:"",theme:"일본 지리",addedAt:537,quizCount:0,wrongCount:0,streak:0},
+  {id:538,kanji:"広島県",kana:"ひろしまけん",meaning:"히로시마현",note:"",theme:"일본 지리",addedAt:538,quizCount:0,wrongCount:0,streak:0},
+  {id:539,kanji:"山口県",kana:"やまぐちけん",meaning:"야마구치현",note:"",theme:"일본 지리",addedAt:539,quizCount:0,wrongCount:0,streak:0},
+  {id:540,kanji:"徳島県",kana:"とくしまけん",meaning:"도쿠시마현",note:"",theme:"일본 지리",addedAt:540,quizCount:0,wrongCount:0,streak:0},
+  {id:541,kanji:"香川県",kana:"かがわけん",meaning:"가가와현",note:"",theme:"일본 지리",addedAt:541,quizCount:0,wrongCount:0,streak:0},
+  {id:542,kanji:"愛媛県",kana:"えひめけん",meaning:"에히메현",note:"",theme:"일본 지리",addedAt:542,quizCount:0,wrongCount:0,streak:0},
+  {id:543,kanji:"高知県",kana:"こうちけん",meaning:"고치현",note:"",theme:"일본 지리",addedAt:543,quizCount:0,wrongCount:0,streak:0},
+  {id:544,kanji:"福岡県",kana:"ふくおかけん",meaning:"후쿠오카현",note:"",theme:"일본 지리",addedAt:544,quizCount:0,wrongCount:0,streak:0},
+  {id:545,kanji:"佐賀県",kana:"さがけん",meaning:"사가현",note:"",theme:"일본 지리",addedAt:545,quizCount:0,wrongCount:0,streak:0},
+  {id:546,kanji:"長崎県",kana:"ながさきけん",meaning:"나가사키현",note:"",theme:"일본 지리",addedAt:546,quizCount:0,wrongCount:0,streak:0},
+  {id:547,kanji:"熊本県",kana:"くまもとけん",meaning:"구마모토현",note:"",theme:"일본 지리",addedAt:547,quizCount:0,wrongCount:0,streak:0},
+  {id:548,kanji:"大分県",kana:"おおいたけん",meaning:"오이타현",note:"",theme:"일본 지리",addedAt:548,quizCount:0,wrongCount:0,streak:0},
+  {id:549,kanji:"宮崎県",kana:"みやざきけん",meaning:"미야자키현",note:"",theme:"일본 지리",addedAt:549,quizCount:0,wrongCount:0,streak:0},
+  {id:550,kanji:"鹿児島県",kana:"かごしまけん",meaning:"가고시마현",note:"",theme:"일본 지리",addedAt:550,quizCount:0,wrongCount:0,streak:0},
+  {id:551,kanji:"沖縄県",kana:"おきなわけん",meaning:"오키나와현",note:"",theme:"일본 지리",addedAt:551,quizCount:0,wrongCount:0,streak:0},
+  {id:552,kanji:"東北地方",kana:"とうほくちほう",meaning:"도호쿠 지방",note:"",theme:"일본 지리",addedAt:552,quizCount:0,wrongCount:0,streak:0},
+  {id:553,kanji:"関東地方",kana:"かんとうちほう",meaning:"간토 지방",note:"",theme:"일본 지리",addedAt:553,quizCount:0,wrongCount:0,streak:0},
+  {id:554,kanji:"中部地方",kana:"ちゅうぶちほう",meaning:"주부 지방",note:"",theme:"일본 지리",addedAt:554,quizCount:0,wrongCount:0,streak:0},
+  {id:555,kanji:"近畿地方",kana:"きんきちほう",meaning:"긴키 지방",note:"",theme:"일본 지리",addedAt:555,quizCount:0,wrongCount:0,streak:0},
+  {id:556,kanji:"中国地方",kana:"ちゅうごくちほう",meaning:"주고쿠 지방",note:"",theme:"일본 지리",addedAt:556,quizCount:0,wrongCount:0,streak:0},
+  {id:557,kanji:"四国地方",kana:"しこくちほう",meaning:"시코쿠 지방",note:"",theme:"일본 지리",addedAt:557,quizCount:0,wrongCount:0,streak:0},
+  {id:558,kanji:"九州地方",kana:"きゅうしゅうちほう",meaning:"규슈 지방",note:"",theme:"일본 지리",addedAt:558,quizCount:0,wrongCount:0,streak:0},
+  {id:559,kanji:"沖縄地方",kana:"おきなわちほう",meaning:"오키나와 지방",note:"",theme:"일본 지리",addedAt:559,quizCount:0,wrongCount:0,streak:0}
 ];
 
 // ── 스토리지 키 ──
@@ -927,9 +977,13 @@ let curTab='dict', dSeg='all', dTheme='', qPool='all', qTheme='';
 
 function setTab(t){
   curTab=t;
-  ['dict','quiz','edit'].forEach((x,i)=>{ document.querySelectorAll('.tab-btn')[i].classList.toggle('active',x===t); document.getElementById('tab-'+x).classList.toggle('active',x===t); });
-  if(t==='dict'){renderThemeFilter();renderDict();}
-  if(t==='quiz'){renderQThemeFilter();updatePool();}
+  const TABS=['dict','flash','quiz','edit'];
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',TABS[i]===t));
+  TABS.forEach(x=>{ const el=document.getElementById('tab-'+x); if(el) el.classList.toggle('active',x===t); });
+  if(t==='dict'){ renderThemeFilter(); renderDict(); }
+  if(t==='quiz'){ renderQThemeFilter(); updatePool(); }
+  if(t==='flash'){ renderFCThemeFilter(); updateFCPool(); }
+
   if(t==='edit') renderEdit();
   updateHdr();
 }
@@ -1242,10 +1296,136 @@ async function findFile(){ try{ const r=await gapi.client.drive.files.list({q:`n
 async function gSave(){ if(!gToken){ setSt('먼저 로그인해주세요'); return; } setSt('저장 중…'); try{ const json=JSON.stringify({version:2,savedAt:new Date().toISOString(),words:WORDS,masterMap:MMAP,wrongSet:[...WSET],wrongLog:WLOG,streaks:STREAKS}); if(gFileId){ await fetch(`https://www.googleapis.com/upload/drive/v3/files/${gFileId}?uploadType=media`,{method:'PATCH',headers:{'Authorization':'Bearer '+gToken,'Content-Type':'application/json'},body:json}); } else { const form=new FormData(); form.append('metadata',new Blob([JSON.stringify({name:G_FILE,mimeType:'application/json'})],{type:'application/json'})); form.append('file',new Blob([json],{type:'application/json'})); const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{'Authorization':'Bearer '+gToken},body:form}); const res=await r.json(); gFileId=res.id; } setSt('☁️ 저장 완료 ('+new Date().toLocaleTimeString('ko-KR')+')'); }catch(e){ setSt('저장 오류: '+e.message); } }
 async function gLoad(){ if(!gToken){ setSt('먼저 로그인해주세요'); return; } if(!gFileId) await findFile(); if(!gFileId){ setSt('저장된 파일이 없어요'); return; } setSt('불러오는 중…'); try{ const r=await fetch(`https://www.googleapis.com/drive/v3/files/${gFileId}?alt=media`,{headers:{'Authorization':'Bearer '+gToken}}); const data=await r.json(); if(!data||data.version!==2){ alert('파일 형식이 맞지 않아요.'); return; } if(!confirm('불러오면 현재 데이터가 덮어씌워져요. 계속할까요?')) return; WORDS=data.words||WORDS; MMAP=data.masterMap||{}; WSET=new Set(data.wrongSet||[]); WLOG=data.wrongLog||[]; STREAKS=data.streaks||{}; saveWords(WORDS); saveMaster(); saveWrong(); saveStreaks(); init(); setSt('📂 불러오기 완료!'); }catch(e){ setSt('불러오기 오류: '+e.message); } }
 
+// ══════════════════════════════════════════════
+//  플래시카드
+// ══════════════════════════════════════════════
+let fcPool='all', fcTheme='', fcState={};
+
+function renderFCThemeFilter(){
+  const el=document.getElementById('fc-theme-filter'); if(!el) return;
+  el.innerHTML=['전체',...allThemes()].map(t=>`<button class="tchip${(t==='전체'&&!fcTheme)||(t===fcTheme)?' active':''}" style="font-size:11px;padding:3px 9px;" onclick="setFCTheme('${t==='전체'?'':t}')">${t}</button>`).join('');
+}
+function setFCTheme(t){ fcTheme=t; renderFCThemeFilter(); updateFCPool(); }
+function setFCPool(p){ fcPool=p; if(p==='wrong') fcTheme=''; document.querySelectorAll('#fc-setup .ptab').forEach((b,i)=>b.classList.toggle('active',['all','wrong'][i]===p)); renderFCThemeFilter(); updateFCPool(); }
+function getFCList(){
+  let list = fcPool==='wrong' ? WORDS.filter(w=>WSET.has(w.id)) : [...WORDS];
+  if(fcTheme) list=list.filter(w=>(w.theme||'기타')===fcTheme);
+  return list;
+}
+function updateFCPool(){
+  renderFCThemeFilter();
+  const list=getFCList();
+  document.getElementById('fc-pool-info').textContent=`${list.length}개 단어`;
+}
+
+function startFlash(){
+  const list=getFCList();
+  if(!list.length){ alert('단어가 없어요.'); return; }
+  const order=document.getElementById('fc-order').value;
+  let words=[...list];
+  if(order==='random') words=shuffle(words);
+  else if(order==='wrong') words=words.sort((a,b)=>b.wrongCount-a.wrongCount);
+  fcState={ words, idx:0, known:0, unknown:0, unknownWords:[] };
+  document.getElementById('fc-setup').style.display='none';
+  document.getElementById('fc-result').style.display='none';
+  document.getElementById('fc-screen').style.display='block';
+  showFCCard();
+}
+
+function showFCCard(){
+  if(fcState.idx>=fcState.words.length){ endFlash(); return; }
+  const inner=document.getElementById('fc-inner');
+  const wasFlipped=inner.classList.contains('flipped');
+
+  // 버튼/힌트 즉시 숨김
+  document.getElementById('fc-btns').style.display='none';
+  document.getElementById('fc-tap-hint').style.display='block';
+
+  function _update(){
+    const w=fcState.words[fcState.idx];
+    const showKanji=!!w.kanji;
+    document.getElementById('fc-front-word').textContent=showKanji?w.kanji:w.kana;
+    document.getElementById('fc-front-kana').textContent=showKanji?w.kana:'';
+    document.getElementById('fc-back-mean').textContent=w.meaning;
+    document.getElementById('fc-back-kana').textContent=w.kana;
+    document.getElementById('fc-back-note').textContent=w.note||'';
+    document.getElementById('fc-prog').textContent=`${fcState.idx+1} / ${fcState.words.length}  ✓${fcState.known}  ✗${fcState.unknown}`;
+  }
+
+  if(wasFlipped){
+    // 뒤집혀 있으면: transition 완료 후 내용 업데이트
+    inner.classList.remove('flipped');
+    setTimeout(_update, 520); // transition 0.5s + 여유
+  } else {
+    // 앞면이면 바로 업데이트
+    _update();
+  }
+}
+function flipCard(){
+  const inner=document.getElementById('fc-inner');
+  if(inner.classList.contains('flipped')) return;
+  inner.classList.add('flipped');
+  document.getElementById('fc-tap-hint').style.display='none';
+  document.getElementById('fc-btns').style.display='flex';
+}
+function fcAnswer(known){
+  const w=fcState.words[fcState.idx];
+  if(known){ fcState.known++; }
+  else{ fcState.unknown++; fcState.unknownWords.push(w); }
+  fcState.idx++;
+  showFCCard();
+}
+function endFlash(){
+  document.getElementById('fc-screen').style.display='none';
+  document.getElementById('fc-result').style.display='block';
+  const {known,unknown,unknownWords,words}=fcState;
+  document.getElementById('fc-result-sub').textContent=`${words.length}개 중 ✓알아요 ${known}개 / ✗몰라요 ${unknown}개`;
+  const retry=document.getElementById('fc-result-retry');
+  if(unknownWords.length){
+    retry.innerHTML=`<button class="btn btn-blue" style="width:100%;margin-bottom:6px" onclick="retryUnknown()">몰랐던 ${unknownWords.length}개만 다시</button>`;
+  } else { retry.innerHTML='<div style="color:var(--green);font-size:15px;margin-bottom:8px">🎉 전부 알아요!</div>'; }
+}
+function retryUnknown(){
+  fcState.words=shuffle([...fcState.unknownWords]);
+  fcState.idx=0; fcState.known=0; fcState.unknown=0; fcState.unknownWords=[];
+  document.getElementById('fc-result').style.display='none';
+  document.getElementById('fc-screen').style.display='block';
+  showFCCard();
+}
+function backFCSetup(){
+  document.getElementById('fc-result').style.display='none';
+  document.getElementById('fc-screen').style.display='none';
+  document.getElementById('fc-setup').style.display='block';
+  updateFCPool();
+}
+
+// ── 발음 듣기 ──
+function speak(text){
+  if(!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.lang='ja-JP'; utt.rate=0.9;
+  // 일본어 음성 선택
+  const voices=window.speechSynthesis.getVoices();
+  const jaVoice=voices.find(v=>v.lang.startsWith('ja'));
+  if(jaVoice) utt.voice=jaVoice;
+  window.speechSynthesis.speak(utt);
+}
+function speakWord(){
+  if(!fcState.words) return;
+  const w=fcState.words[fcState.idx];
+  if(w) speak(w.kana);
+}
+
+
+
 // ── 초기화 ──
 function init(){
   WORDS=loadWords(); MMAP=JSON.parse(localStorage.getItem(SK_MASTER)||'{}'); WSET=new Set(JSON.parse(localStorage.getItem(SK_WRONG)||'[]')); WLOG=JSON.parse(localStorage.getItem(SK_WLOG)||'[]'); STREAKS=JSON.parse(localStorage.getItem(SK_STREAKS)||'{}');
   buildModeCards(); updateHdr(); renderThemeFilter(); renderDict(); updatePool();
+  renderFCThemeFilter(); updateFCPool();
+  // 음성 목록 미리 로드 (일부 브라우저 필요)
+  if(window.speechSynthesis) window.speechSynthesis.getVoices();
 }
 init();
 </script>
