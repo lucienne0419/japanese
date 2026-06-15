@@ -1282,6 +1282,30 @@ function addWord(){
   const note=(document.getElementById('add-note').value||'').trim();
   const theme=(document.getElementById('add-theme').value||'기타').trim();
   if(!kana||!mean){ alert('히라가나와 뜻은 필수예요.'); return; }
+
+  // 현재 편집 중인 내용 먼저 저장 (alert 없이)
+  const rows=document.querySelectorAll('#edit-body tbody tr');
+  if(rows.length>0){
+    const editedIds=new Set();
+    const updated=[];
+    rows.forEach(row=>{
+      const id=parseInt(row.dataset.id);
+      const k=(row.querySelector('[data-f="kanji"]').value||'').trim();
+      const kn=(row.querySelector('[data-f="kana"]').value||'').trim();
+      const m=(row.querySelector('[data-f="meaning"]').value||'').trim();
+      const n=(row.querySelector('[data-f="note"]').value||'').trim();
+      const t=(row.querySelector('[data-f="theme"]')?.value||'기타').trim();
+      if(!kn||!m) return;
+      const orig=WORDS.find(w=>w.id===id)||{quizCount:0,wrongCount:0,streak:0,addedAt:id};
+      updated.push({...orig,id,kanji:k,kana:kn,meaning:m,note:n,theme:t});
+      editedIds.add(id);
+    });
+    const kept=WORDS.filter(w=>!editedIds.has(w.id));
+    WORDS=[...kept,...updated].sort((a,b)=>a.addedAt-b.addedAt);
+    saveWords(WORDS);
+  }
+
+  // 새 단어 추가
   const newId=Math.max(0,...WORDS.map(w=>w.id))+1;
   WORDS.push({id:newId,kanji,kana,meaning:mean,note,theme,addedAt:newId,quizCount:0,wrongCount:0,streak:0});
   saveWords(WORDS);
@@ -1290,7 +1314,29 @@ function addWord(){
 }
 function delWord(id){
   if(!confirm('삭제할까요?')) return;
-  WORDS=WORDS.filter(w=>w.id!==id);
+  // 현재 편집 내용 먼저 저장
+  const rows=document.querySelectorAll('#edit-body tbody tr');
+  if(rows.length>0){
+    const editedIds=new Set();
+    const updated=[];
+    rows.forEach(row=>{
+      const rid=parseInt(row.dataset.id);
+      if(rid===id) return; // 삭제할 항목은 스킵
+      const k=(row.querySelector('[data-f="kanji"]').value||'').trim();
+      const kn=(row.querySelector('[data-f="kana"]').value||'').trim();
+      const m=(row.querySelector('[data-f="meaning"]').value||'').trim();
+      const n=(row.querySelector('[data-f="note"]').value||'').trim();
+      const t=(row.querySelector('[data-f="theme"]')?.value||'기타').trim();
+      if(!kn||!m) return;
+      const orig=WORDS.find(w=>w.id===rid)||{quizCount:0,wrongCount:0,streak:0,addedAt:rid};
+      updated.push({...orig,id:rid,kanji:k,kana:kn,meaning:m,note:n,theme:t});
+      editedIds.add(rid);
+    });
+    const kept=WORDS.filter(w=>!editedIds.has(w.id)&&w.id!==id);
+    WORDS=[...kept,...updated].sort((a,b)=>a.addedAt-b.addedAt);
+  } else {
+    WORDS=WORDS.filter(w=>w.id!==id);
+  }
   Object.keys(MMAP).filter(k=>k.startsWith(id+'_')).forEach(k=>delete MMAP[k]);
   WSET.delete(id); saveMaster(); saveWrong(); saveWords(WORDS); renderEdit(); updateHdr();
 }
