@@ -131,6 +131,7 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
       <div class="chip">📚 총 <b id="h-total">0</b>개</div>
       <div class="chip">⭐ 마스터 <b id="h-master">0</b>개</div>
       <div class="chip">❌ 오답 <b id="h-wrong">0</b>개</div>
+      <div class="chip">⭐ 즐겨찾기 <b id="h-fav">0</b>개</div>
     </div>
   </div>
   <div id="recent-w">최근 틀린 단어: 없음</div>
@@ -158,6 +159,7 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
           <button class="seg-btn active" onclick="setDSeg('all')">전체</button>
           <button class="seg-btn" onclick="setDSeg('wrong')">오답</button>
           <button class="seg-btn" onclick="setDSeg('master')">마스터</button>
+          <button class="seg-btn" onclick="setDSeg('fav')">⭐</button>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="exportTxt()">⬇ TXT</button>
       </div>
@@ -185,6 +187,7 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
       <div class="pool-tabs">
         <button class="ptab active" onclick="setFCPool('all')">전체</button>
         <button class="ptab" onclick="setFCPool('wrong')">오답노트</button>
+        <button class="ptab" onclick="setFCPool('fav')">⭐ 즐겨찾기</button>
       </div>
       <div id="fc-theme-filter"></div>
       <div id="fc-pool-info" style="font-size:12px;color:var(--sub);margin-bottom:12px;"></div>
@@ -197,6 +200,7 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
       <button class="btn btn-primary" style="width:100%" onclick="startFlash()">플래시카드 시작 →</button>
     </div>
     <div id="fc-screen" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;"><button onclick="backFCSetup()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--sub);font-family:inherit">✕ 나가기</button></div>
       <div class="fc-prog" id="fc-prog"></div>
       <div class="fc-wrap" id="fc-wrap" onclick="flipCard()">
         <div class="fc-inner" id="fc-inner">
@@ -214,6 +218,7 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
       </div>
       <div style="text-align:center;margin-bottom:14px;">
         <button class="fc-snd" onclick="speakWord()">🔊 발음 듣기</button>
+        <button class="fc-snd" id="fc-fav-btn" onclick="fcToggleFav()">☆ 즐겨찾기</button>
       </div>
       <div class="fc-btns" id="fc-btns" style="display:none">
         <button class="fc-btn-no" onclick="fcAnswer(false)">✕ 몰라요</button>
@@ -238,6 +243,7 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
       <div class="pool-tabs">
         <button class="ptab active" onclick="setPool('all')">전체</button>
         <button class="ptab" onclick="setPool('wrong')">오답노트</button>
+        <button class="ptab" onclick="setPool('fav')">⭐ 즐겨찾기</button>
       </div>
       <div style="font-size:11px;color:var(--sub);margin-bottom:6px;font-weight:600;">퀴즈 유형</div>
       <div class="pool-tabs" id="quiz-type-tabs"></div>
@@ -256,6 +262,7 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
     <div id="qscreen" style="display:none">
       <div id="master-toast">⭐ 마스터!</div>
       <div class="card">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:6px;"><button onclick="quitQuiz()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--sub);font-family:inherit">✕ 나가기</button></div>
         <div class="qprog-bg"><div class="qprog-fill" id="qfill" style="width:0%"></div></div>
         <div id="qprog-txt">0/0</div>
         <div id="streak-bar"></div>
@@ -270,6 +277,7 @@ body{background:var(--bg);font-family:"Noto Sans KR","Noto Sans JP",sans-serif;c
         <input id="ans-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false" style="display:none">
         <button id="submit-btn" onclick="submitAns()" style="display:none">제출하기</button>
         <div id="qfeedback"></div>
+        <div id="q-next-area" style="display:none;gap:8px;margin-top:14px;align-items:center;"></div>
       </div>
     </div>
     <div id="qresult" style="display:none">
@@ -1045,7 +1053,7 @@ const TYPE_MODES = {
 };
 const OLD_CATEGORIES = ['시간표현','조수사','기본단어','국가기념일','젓가락금기','일본지명'];
 // 카테고리별 퀴즈 모드 정의
-const SK_WORDS='jpq2_words', SK_MASTER='jpq2_master', SK_WRONG='jpq2_wrong', SK_WLOG='jpq2_wlog', SK_STREAKS='jpq2_streaks', SK_VER='jpq2_ver';
+const SK_WORDS='jpq2_words', SK_MASTER='jpq2_master', SK_WRONG='jpq2_wrong', SK_WLOG='jpq2_wlog', SK_STREAKS='jpq2_streaks', SK_VER='jpq2_ver', SK_FAV='jpq2_fav';
 const BASE_VER='2026-06-17';
 const MTHRESH=3;
 
@@ -1065,9 +1073,12 @@ function loadWords(){
   return JSON.parse(JSON.stringify(BASE_WORDS));
 }
 function saveWords(w){ localStorage.setItem(SK_WORDS,JSON.stringify(w)); }
-function resetDefault(){ if(!confirm('모든 단어를 기본값으로 초기화할까요?\n(마스터·오답 기록도 삭제)')) return; [SK_WORDS,SK_MASTER,SK_WRONG,SK_WLOG,SK_STREAKS,SK_VER].forEach(k=>localStorage.removeItem(k)); init(); }
+function resetDefault(){ if(!confirm('모든 단어를 기본값으로 초기화할까요?\n(마스터·오답·즐겨찾기 기록도 삭제)')) return; [SK_WORDS,SK_MASTER,SK_WRONG,SK_WLOG,SK_STREAKS,SK_VER,SK_FAV].forEach(k=>localStorage.removeItem(k)); init(); }
 
-let WORDS=loadWords(), MMAP=JSON.parse(localStorage.getItem(SK_MASTER)||'{}'), WSET=new Set(JSON.parse(localStorage.getItem(SK_WRONG)||'[]')), WLOG=JSON.parse(localStorage.getItem(SK_WLOG)||'[]'), STREAKS=JSON.parse(localStorage.getItem(SK_STREAKS)||'{}');
+let WORDS=loadWords(), MMAP=JSON.parse(localStorage.getItem(SK_MASTER)||'{}'), WSET=new Set(JSON.parse(localStorage.getItem(SK_WRONG)||'[]')), WLOG=JSON.parse(localStorage.getItem(SK_WLOG)||'[]'), STREAKS=JSON.parse(localStorage.getItem(SK_STREAKS)||'{}'), FAVSET=new Set(JSON.parse(localStorage.getItem(SK_FAV)||'[]'));
+function saveFav(){localStorage.setItem(SK_FAV,JSON.stringify([...FAVSET]));}
+function toggleFav(id){if(FAVSET.has(id))FAVSET.delete(id);else FAVSET.add(id);saveFav();triggerAutoSave();}
+function isFav(id){return FAVSET.has(id);}
 
 function mkey(id,m){return id+'_'+m;}
 function isMastered(id,m){return !!MMAP[mkey(id,m)];}
@@ -1109,6 +1120,7 @@ function updateHdr(){
   document.getElementById('h-total').textContent=WORDS.length;
   document.getElementById('h-master').textContent=totalMastered();
   document.getElementById('h-wrong').textContent=WSET.size;
+  const fe=document.getElementById('h-fav');if(fe)fe.textContent=FAVSET.size;
   const rec=WLOG.slice(-5).reverse();
   document.getElementById('recent-w').textContent=rec.length?'최근 틀린 단어: '+rec.map(e=>e.word).join(' / '):'최근 틀린 단어: 없음';
 }
@@ -1117,20 +1129,22 @@ function allThemes(){return [...new Set(WORDS.map(w=>w.theme||'기타'))].sort((
 // 단어장
 function renderThemeFilter(){const el=document.getElementById('theme-filter');if(!el)return;el.innerHTML=['전체',...allThemes()].map(t=>`<button class="tchip${(t==='전체'&&!dTheme)||(t===dTheme)?' active':''}" onclick="setDTheme('${t==='전체'?'':t}')">${t}</button>`).join('');const dl=document.getElementById('tdl');if(dl)dl.innerHTML=allThemes().map(t=>`<option value="${esc(t)}">`).join('');}
 function setDTheme(t){dTheme=t;renderThemeFilter();renderDict();}
-function setDSeg(s){dSeg=s;document.querySelectorAll('#tab-dict .seg-btn').forEach((b,i)=>b.classList.toggle('active',['all','wrong','master'][i]===s));renderDict();}
+function setDSeg(s){dSeg=s;document.querySelectorAll('#tab-dict .seg-btn').forEach((b,i)=>b.classList.toggle('active',['all','wrong','master','fav'][i]===s));renderDict();}
 function renderDict(){
   const q=(document.getElementById('dict-search').value||'').toLowerCase();
   const key=document.getElementById('sort-key').value,dir=document.getElementById('sort-dir').value;
   let list=[...WORDS];
   if(dSeg==='wrong')list=list.filter(w=>WSET.has(w.id));
   if(dSeg==='master')list=list.filter(w=>isAnyMastered(w.id));
+  if(dSeg==='fav')list=list.filter(w=>FAVSET.has(w.id));
   if(dTheme)list=list.filter(w=>(w.theme||'기타')===dTheme);
   if(q)list=list.filter(w=>(w.kanji+w.kana+w.meaning+(w.theme||'')).toLowerCase().includes(q));
   list.sort((a,b)=>{let va=a[key],vb=b[key];const d=typeof va==='string'?va.localeCompare(vb,'ja'):va-vb;return dir==='asc'?d:-d;});
   if(!list.length){document.getElementById('dict-body').innerHTML='<div style="padding:20px;text-align:center;color:var(--sub)">단어 없음</div>';return;}
-  const rows=list.map(w=>`<tr><td style="font-size:14px;font-weight:700">${w.kanji||'—'}</td><td class="kana">${w.kana}</td><td>${w.meaning}</td><td><span style="background:#F3F4F6;border-radius:5px;padding:1px 6px;font-size:11px">${w.theme||'기타'}</span></td><td style="font-size:11px;color:var(--sub)">${w.date||''}</td><td style="font-size:11px;color:var(--sub);max-width:160px">${w.note||''}</td><td>${isAnyMastered(w.id)?'<span class="tag-m">⭐</span>':''}${WSET.has(w.id)?'<span class="tag-w">오답</span>':''}</td></tr>`).join('');
-  document.getElementById('dict-body').innerHTML=`<table class="dtbl"><thead><tr><th>한자</th><th>히라가나</th><th>뜻</th><th>분야</th><th>날짜</th><th>설명</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const rows=list.map(w=>`<tr><td style="text-align:center"><button onclick="dictToggleFav(${w.id},this)" style="background:none;border:none;cursor:pointer;font-size:15px;color:${isFav(w.id)?'var(--gold)':'#ccc'}">${isFav(w.id)?'⭐':'☆'}</button></td><td style="font-size:14px;font-weight:700">${w.kanji||'—'}</td><td class="kana">${w.kana}</td><td>${w.meaning}</td><td><span style="background:#F3F4F6;border-radius:5px;padding:1px 6px;font-size:11px">${w.theme||'기타'}</span></td><td style="font-size:11px;color:var(--sub)">${w.date||''}</td><td style="font-size:11px;color:var(--sub);max-width:160px">${w.note||''}</td><td>${isAnyMastered(w.id)?'<span class="tag-m">⭐</span>':''}${WSET.has(w.id)?'<span class="tag-w">오답</span>':''}</td></tr>`).join('');
+  document.getElementById('dict-body').innerHTML=`<table class="dtbl"><thead><tr><th>⭐</th><th>한자</th><th>히라가나</th><th>뜻</th><th>분야</th><th>날짜</th><th>설명</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
+function dictToggleFav(id,btn){toggleFav(id);const f=isFav(id);btn.textContent=f?'⭐':'☆';btn.style.color=f?'var(--gold)':'#ccc';updateHdr();}
 function exportTxt(){
   let list=[...WORDS];
   if(dSeg==='wrong')list=list.filter(w=>WSET.has(w.id));
@@ -1145,15 +1159,15 @@ function exportTxt(){
 let fcPool='all',fcTheme='',fcState={};
 function renderFCThemeFilter(){const el=document.getElementById('fc-theme-filter');if(!el)return;el.innerHTML=['전체',...allThemes()].map(t=>`<button class="tchip${(t==='전체'&&!fcTheme)||(t===fcTheme)?' active':''}" onclick="setFCTheme('${t==='전체'?'':t}')">${t}</button>`).join('');}
 function setFCTheme(t){fcTheme=t;renderFCThemeFilter();updateFCPool();}
-function setFCPool(p){fcPool=p;if(p==='wrong')fcTheme='';document.querySelectorAll('#fc-setup .ptab').forEach((b,i)=>b.classList.toggle('active',['all','wrong'][i]===p));renderFCThemeFilter();updateFCPool();}
-function getFCList(){let l=fcPool==='wrong'?WORDS.filter(w=>WSET.has(w.id)):[...WORDS];if(fcTheme)l=l.filter(w=>(w.theme||'기타')===fcTheme);return l;}
+function setFCPool(p){fcPool=p;if(p!=='all')fcTheme='';document.querySelectorAll('#fc-setup .ptab').forEach((b,i)=>b.classList.toggle('active',['all','wrong','fav'][i]===p));renderFCThemeFilter();updateFCPool();}
+function getFCList(){let l=fcPool==='wrong'?WORDS.filter(w=>WSET.has(w.id)):fcPool==='fav'?WORDS.filter(w=>FAVSET.has(w.id)):[...WORDS];if(fcTheme)l=l.filter(w=>(w.theme||'기타')===fcTheme);return l;}
 function updateFCPool(){renderFCThemeFilter();document.getElementById('fc-pool-info').textContent=`${getFCList().length}개 단어`;}
 function startFlash(){const l=getFCList();if(!l.length){alert('단어가 없어요.');return;}const o=document.getElementById('fc-order').value;let w=[...l];if(o==='random')w=shuffle(w);else if(o==='wrong')w=w.sort((a,b)=>b.wrongCount-a.wrongCount);fcState={words:w,idx:0,known:0,unknown:0,unknownWords:[]};document.getElementById('fc-setup').style.display='none';document.getElementById('fc-result').style.display='none';document.getElementById('fc-screen').style.display='block';showFCCard();}
 function showFCCard(){
   if(fcState.idx>=fcState.words.length){endFlash();return;}
   const inner=document.getElementById('fc-inner'),wasF=inner.classList.contains('flipped');
   document.getElementById('fc-btns').style.display='none';document.getElementById('fc-tap-hint').style.display='block';
-  function upd(){const w=fcState.words[fcState.idx],sk=!!w.kanji;document.getElementById('fc-front-word').textContent=sk?w.kanji:w.kana;document.getElementById('fc-front-kana').textContent=sk?w.kana:'';document.getElementById('fc-back-mean').textContent=w.meaning;document.getElementById('fc-back-kana').textContent=w.kana;document.getElementById('fc-back-note').textContent=[w.date,w.note].filter(Boolean).join(' · ');document.getElementById('fc-prog').textContent=`${fcState.idx+1} / ${fcState.words.length}  ✓${fcState.known} ✗${fcState.unknown}`;}
+  function upd(){const w=fcState.words[fcState.idx],sk=!!w.kanji;document.getElementById('fc-front-word').textContent=sk?w.kanji:w.kana;document.getElementById('fc-front-kana').textContent=sk?w.kana:'';document.getElementById('fc-back-mean').textContent=w.meaning;document.getElementById('fc-back-kana').textContent=w.kana;document.getElementById('fc-back-note').textContent=[w.date,w.note].filter(Boolean).join(' · ');document.getElementById('fc-prog').textContent=`${fcState.idx+1} / ${fcState.words.length}  ✓${fcState.known} ✗${fcState.unknown}`;updateFCFavBtn();}
   if(wasF){inner.classList.remove('flipped');setTimeout(upd,520);}else upd();
 }
 function flipCard(){const i=document.getElementById('fc-inner');if(i.classList.contains('flipped'))return;i.classList.add('flipped');document.getElementById('fc-tap-hint').style.display='none';document.getElementById('fc-btns').style.display='flex';}
@@ -1163,6 +1177,8 @@ function retryUnknown(){fcState.words=shuffle([...fcState.unknownWords]);fcState
 function backFCSetup(){document.getElementById('fc-result').style.display='none';document.getElementById('fc-screen').style.display='none';document.getElementById('fc-setup').style.display='block';updateFCPool();}
 function speak(t){if(!window.speechSynthesis)return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';u.rate=0.9;const v=window.speechSynthesis.getVoices().find(x=>x.lang.startsWith('ja'));if(v)u.voice=v;window.speechSynthesis.speak(u);}
 function speakWord(){if(fcState.words)speak(fcState.words[fcState.idx].kana);}
+function fcToggleFav(){const w=fcState.words[fcState.idx];toggleFav(w.id);updateFCFavBtn();updateHdr();}
+function updateFCFavBtn(){const w=fcState.words[fcState.idx];const b=document.getElementById('fc-fav-btn');if(b&&w){const f=isFav(w.id);b.textContent=f?'⭐ 즐겨찾기됨':'☆ 즐겨찾기';b.style.color=f?'var(--gold)':'var(--sub)';}}
 
 // ── 퀴즈 ──
 function curType(){return QUIZ_TYPES.find(t=>t.id===qType)||QUIZ_TYPES[0];}
@@ -1197,11 +1213,11 @@ function renderQThemeFilter(){
   el.innerHTML=['전체',...themes].map(t=>`<button class="tchip${(t==='전체'&&!qTheme)||(t===qTheme)?' active':''}" onclick="setQTheme('${t==='전체'?'':t}')">${t}</button>`).join('');
 }
 function setQTheme(t){qTheme=t;renderQThemeFilter();updatePool();}
-function setPool(p){qPool=p;document.querySelectorAll('#qsetup .pool-tabs:first-of-type .ptab').forEach((b,i)=>b.classList.toggle('active',['all','wrong'][i]===p));updatePool();}
+function setPool(p){qPool=p;document.querySelectorAll('#qsetup .pool-tabs:first-of-type .ptab').forEach((b,i)=>b.classList.toggle('active',['all','wrong','fav'][i]===p));updatePool();}
 
 function getQList(){
   const t=curType();
-  let l=qPool==='wrong'?WORDS.filter(w=>WSET.has(w.id)):[...WORDS];
+  let l=qPool==='wrong'?WORDS.filter(w=>WSET.has(w.id)):qPool==='fav'?WORDS.filter(w=>FAVSET.has(w.id)):[...WORDS];
   // 고정 분야 유형
   if(t.fixedTheme) l=l.filter(w=>(w.theme||'')===t.fixedTheme);
   // 분야 필터 가능 유형
@@ -1234,6 +1250,7 @@ function startQuiz(){
   nextQ();
 }
 function nextQ(){
+  const na=document.getElementById('q-next-area');if(na){na.style.display='none';na.innerHTML='';}
   if(QS.idx>=QS.words.length){endQuiz();return;}
   QS.proc=false;QS.hint=false;
   const w=QS.words[QS.idx],mode=QS.mode,k=mkey(w.id,mode);
@@ -1257,7 +1274,7 @@ function nextQ(){
   else if(mode==='kana2mean'){ q=w.kana; ca=w.meaning; }              // 가나→뜻
   else if(mode==='jp2mean-mc'){ q=asK?w.kanji:w.kana; ca=w.meaning; if(asK)hint=w.kana; }  // 일본어→뜻 객관식
   else if(mode==='cnt-mc'){ q=w.meaning; ca=w.kana; }                 // 조수사 객관식
-  else if(mode==='name2date'){ q=asK?w.kanji:w.kana; ca=w.date; sub=w.meaning; if(asK)hint=w.kana; }  // 이름→날짜
+  else if(mode==='name2date'){ q=asK?w.kanji:w.kana; ca=w.date; sub=''; if(asK)hint=w.kana; }  // 이름→날짜 (뜻 숨김)
   else if(mode==='date2name'){ q=w.date; ca=w.meaning; sub='이 날짜의 기념일은?'; }  // 날짜→이름
   else if(mode==='geo-name'){ q=asK?w.kanji:w.kana; ca=w.meaning; if(asK)hint=w.kana; }  // 한자/가나→지명
   else if(mode==='geo-feat'){ q=w.note; ca=w.meaning; sub='이 특징의 지명은?'; }  // 특징→지명 객관식
@@ -1317,7 +1334,7 @@ function pickC(btn,chosen){
   if(!ok)document.querySelectorAll('.cbtn').forEach(b=>{if(chkAns(b.textContent,QS.cur.ca))b.classList.add('ok');});
   const fb=document.getElementById('qfeedback');
   fb.textContent=ok?'⭕ 정답!':`❌ 정답: ${QS.cur.ca}`;fb.className=ok?'ok':'ng';
-  procResult(ok);QS.idx++;setTimeout(nextQ,1100);
+  procResult(ok);QS.idx++;showNextBtn();
 }
 function submitAns(){
   if(QS.proc)return;
@@ -1328,16 +1345,28 @@ function submitAns(){
   const fb=document.getElementById('qfeedback');
   const extra=QS.cur.w.kana!==QS.cur.ca?`  (${QS.cur.w.kana} / ${QS.cur.w.meaning})`:'';
   fb.textContent=ok?'⭕ 정답!'+(QS.cur.hint?` (${QS.cur.w.kana})`:''):`❌ 정답: ${QS.cur.ca}${extra}`;fb.className=ok?'ok':'ng';
-  procResult(ok);QS.idx++;setTimeout(nextQ,1300);
+  procResult(ok);QS.idx++;showNextBtn();
 }
+function showNextBtn(){
+  const w=QS.cur.w;
+  const isLast=QS.idx>=QS.words.length;
+  const favBtn=`<button id="q-fav-btn" onclick="quizToggleFav(${w.id})" style="background:none;border:1.5px solid var(--gold);border-radius:8px;padding:9px 14px;font-size:13px;cursor:pointer;color:${isFav(w.id)?'#fff':'var(--gold)'};background:${isFav(w.id)?'var(--gold)':'none'};font-weight:600;font-family:inherit">${isFav(w.id)?'⭐ 즐겨찾기됨':'☆ 즐겨찾기'}</button>`;
+  document.getElementById('q-next-area').innerHTML=`${favBtn}<button onclick="nextQ()" style="flex:1;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">${isLast?'결과 보기 →':'다음 →'}</button>`;
+  document.getElementById('q-next-area').style.display='flex';
+}
+function quizToggleFav(id){toggleFav(id);const b=document.getElementById('q-fav-btn');if(b){const f=isFav(id);b.textContent=f?'⭐ 즐겨찾기됨':'☆ 즐겨찾기';b.style.color=f?'#fff':'var(--gold)';b.style.background=f?'var(--gold)':'none';}}
 function procResult(ok){
   const w=QS.cur.w,mode=QS.mode,k=mkey(w.id,mode);
   const wo=WORDS.find(x=>x.id===w.id);if(wo)wo.quizCount++;
   if(ok&&!QS.hint){
     QS.score++;
+    // 오답노트 모드에서 맞히면 오답노트에서 제거
+    if(QS.isWrong&&WSET.has(w.id)){WSET.delete(w.id);saveWrong();}
     if(!QS.isWrong){
       STREAKS[k]=(STREAKS[k]||0)+1;saveStreaks();
       if(STREAKS[k]>=MTHRESH&&!isMastered(w.id,mode)){setMastered(w.id,mode);delete STREAKS[k];saveStreaks();QS.newM.push({w,mode});showMToast(w.kanji||w.kana);}
+      // 전체 모드에서도 오답 단어를 맞히면 제거
+      if(WSET.has(w.id)){WSET.delete(w.id);saveWrong();}
     }
   } else if(!ok||QS.hint){
     if(!ok&&wo)wo.wrongCount++;
@@ -1355,10 +1384,12 @@ function endQuiz(){
   document.getElementById('r-score').textContent=`${QS.score} / ${QS.words.length}`;
   document.getElementById('r-sub').textContent=`정답률 ${pct}%  ·  오답 ${QS.wrongs.length}개`;
   document.getElementById('r-master').innerHTML=QS.newM.length?`<div style="font-size:12px;background:#FFF3CD;border:1px solid var(--gold);border-radius:8px;padding:7px 11px;margin-bottom:8px">⭐ 마스터: ${QS.newM.map(({w})=>w.kanji||w.kana).join(', ')}</div>`:'';
-  document.getElementById('r-wrongs').innerHTML=QS.wrongs.length?`<div style="font-size:12px;color:var(--accent);margin-bottom:4px">오답</div><div class="wlist">${QS.wrongs.map(w=>`<div class="wrow"><span class="wq">${w.kanji||w.kana}</span><span>→ ${w.meaning}</span></div>`).join('')}</div>`:'<div style="text-align:center;color:var(--green);font-size:17px;padding:14px">🎉 오답 없음!</div>';
+  document.getElementById('r-wrongs').innerHTML=QS.wrongs.length?`<div style="font-size:12px;color:var(--accent);margin-bottom:4px">오답 (☆ 눌러 즐겨찾기)</div><div class="wlist">${QS.wrongs.map(w=>`<div class="wrow"><button onclick="resultToggleFav(${w.id},this)" style="background:none;border:none;cursor:pointer;font-size:15px;color:${isFav(w.id)?'var(--gold)':'#ccc'}">${isFav(w.id)?'⭐':'☆'}</button><span class="wq">${w.kanji||w.kana}</span><span>→ ${w.meaning}</span></div>`).join('')}</div>`:'<div style="text-align:center;color:var(--green);font-size:17px;padding:14px">🎉 오답 없음!</div>';
   updateHdr();
 }
 function backSetup(){document.getElementById('qresult').style.display='none';document.getElementById('qscreen').style.display='none';document.getElementById('qsetup').style.display='block';updatePool();updateHdr();}
+function quitQuiz(){if(QS.idx>0&&!confirm('퀴즈를 중단할까요? 지금까지 기록은 저장됩니다.'))return;backSetup();}
+function resultToggleFav(id,btn){toggleFav(id);const f=isFav(id);btn.textContent=f?'⭐':'☆';btn.style.color=f?'var(--gold)':'#ccc';updateHdr();}
 
 // ── 편집 ──
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
@@ -1420,7 +1451,7 @@ const G_FILE='japanese_vocab_save.json';
 let gToken=null,gFileId=null,gapiOk=false,gisOk=false,gTC=null,autoT=null;
 function triggerAutoSave(){if(!gToken)return;clearTimeout(autoT);autoT=setTimeout(()=>{setSt('💾 자동 저장 중…');gSave(true);},30000);}
 window.addEventListener('beforeunload',()=>{if(!gToken||!gFileId)return;const j=JSON.stringify(buildSave());navigator.sendBeacon(`https://www.googleapis.com/upload/drive/v3/files/${gFileId}?uploadType=media`,new Blob([j],{type:'application/json'}));});
-function buildSave(){return{version:3,savedAt:new Date().toISOString(),words:WORDS,masterMap:MMAP,wrongSet:[...WSET],wrongLog:WLOG,streaks:STREAKS};}
+function buildSave(){return{version:3,savedAt:new Date().toISOString(),words:WORDS,masterMap:MMAP,wrongSet:[...WSET],wrongLog:WLOG,streaks:STREAKS,favSet:[...FAVSET]};}
 window.gapiLoaded=function(){gapi.load('client',async()=>{await gapi.client.init({apiKey:G_KEY,discoveryDocs:[G_DISC]});gapiOk=true;chkLogin();});}
 window.gisLoaded=function(){gTC=google.accounts.oauth2.initTokenClient({client_id:G_CID,scope:G_SCOPE,callback:async r=>{if(r.error){setSt('❌ 로그인 실패');return;}gToken=r.access_token;showDrive();setSt('✅ 로그인됨');await findFile();}});gisOk=true;chkLogin();}
 function chkLogin(){if(gapiOk&&gisOk)document.getElementById('btn-login').style.display='inline-block';}
@@ -1429,10 +1460,10 @@ function setSt(m){document.getElementById('drive-st').textContent=m;}
 function gLogin(){if(!gapiOk||!gisOk){setSt('API 로딩 중…');return;}gTC.requestAccessToken({prompt:'consent'});}
 async function findFile(){try{const r=await gapi.client.drive.files.list({q:`name='${G_FILE}' and trashed=false`,fields:'files(id,name)',spaces:'drive'});const f=r.result.files;if(f&&f.length>0){gFileId=f[0].id;setSt('✅ 로그인됨 (저장 파일 있음)');}else setSt('✅ 로그인됨');}catch(e){setSt('파일 검색 오류');}}
 async function gSave(silent){if(!gToken){setSt('먼저 로그인');return;}if(!silent)setSt('저장 중…');try{const json=JSON.stringify(buildSave());if(gFileId){await fetch(`https://www.googleapis.com/upload/drive/v3/files/${gFileId}?uploadType=media`,{method:'PATCH',headers:{'Authorization':'Bearer '+gToken,'Content-Type':'application/json'},body:json});}else{const form=new FormData();form.append('metadata',new Blob([JSON.stringify({name:G_FILE,mimeType:'application/json'})],{type:'application/json'}));form.append('file',new Blob([json],{type:'application/json'}));const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{'Authorization':'Bearer '+gToken},body:form});gFileId=(await r.json()).id;}setSt('☁️ '+(silent?'자동 ':'')+'저장 완료 ('+new Date().toLocaleTimeString('ko-KR')+')');}catch(e){setSt('저장 오류: '+e.message);}}
-async function gLoad(){if(!gToken){setSt('먼저 로그인');return;}if(!gFileId)await findFile();if(!gFileId){setSt('저장 파일 없음');return;}setSt('불러오는 중…');try{const r=await fetch(`https://www.googleapis.com/drive/v3/files/${gFileId}?alt=media`,{headers:{'Authorization':'Bearer '+gToken}});const d=await r.json();if(!d||(d.version!==2&&d.version!==3)){alert('형식 오류');return;}if(!confirm('현재 데이터를 덮어씁니다. 계속?'))return;WORDS=d.words||WORDS;MMAP=d.masterMap||{};WSET=new Set(d.wrongSet||[]);WLOG=d.wrongLog||[];STREAKS=d.streaks||{};saveWords(WORDS);saveMaster();saveWrong();saveStreaks();init();setSt('📂 불러오기 완료!');}catch(e){setSt('불러오기 오류: '+e.message);}}
+async function gLoad(){if(!gToken){setSt('먼저 로그인');return;}if(!gFileId)await findFile();if(!gFileId){setSt('저장 파일 없음');return;}setSt('불러오는 중…');try{const r=await fetch(`https://www.googleapis.com/drive/v3/files/${gFileId}?alt=media`,{headers:{'Authorization':'Bearer '+gToken}});const d=await r.json();if(!d||(d.version!==2&&d.version!==3)){alert('형식 오류');return;}if(!confirm('현재 데이터를 덮어씁니다. 계속?'))return;WORDS=d.words||WORDS;MMAP=d.masterMap||{};WSET=new Set(d.wrongSet||[]);WLOG=d.wrongLog||[];STREAKS=d.streaks||{};FAVSET=new Set(d.favSet||[]);saveWords(WORDS);saveMaster();saveWrong();saveStreaks();saveFav();init();setSt('📂 불러오기 완료!');}catch(e){setSt('불러오기 오류: '+e.message);}}
 
 function init(){
-  WORDS=loadWords();MMAP=JSON.parse(localStorage.getItem(SK_MASTER)||'{}');WSET=new Set(JSON.parse(localStorage.getItem(SK_WRONG)||'[]'));WLOG=JSON.parse(localStorage.getItem(SK_WLOG)||'[]');STREAKS=JSON.parse(localStorage.getItem(SK_STREAKS)||'{}');
+  WORDS=loadWords();MMAP=JSON.parse(localStorage.getItem(SK_MASTER)||'{}');WSET=new Set(JSON.parse(localStorage.getItem(SK_WRONG)||'[]'));WLOG=JSON.parse(localStorage.getItem(SK_WLOG)||'[]');STREAKS=JSON.parse(localStorage.getItem(SK_STREAKS)||'{}');FAVSET=new Set(JSON.parse(localStorage.getItem(SK_FAV)||'[]'));
   updateHdr();renderThemeFilter();renderDict();renderTypeTabs();renderModeTabs();renderQThemeFilter();updatePool();renderFCThemeFilter();updateFCPool();
   if(window.speechSynthesis)window.speechSynthesis.getVoices();
 }
