@@ -1288,7 +1288,8 @@ function saveStreaks(){localStorage.setItem(SK_STREAKS,JSON.stringify(STREAKS));
 // 로마자
 const ROM={'あ':'a','い':'i','う':'u','え':'e','お':'o','か':'ka','き':'ki','く':'ku','け':'ke','こ':'ko','さ':'sa','し':'shi','す':'su','せ':'se','そ':'so','た':'ta','ち':'chi','つ':'tsu','て':'te','と':'to','な':'na','に':'ni','ぬ':'nu','ね':'ne','の':'no','は':'ha','ひ':'hi','ふ':'fu','へ':'he','ほ':'ho','ま':'ma','み':'mi','む':'mu','め':'me','も':'mo','や':'ya','ゆ':'yu','よ':'yo','ら':'ra','り':'ri','る':'ru','れ':'re','ろ':'ro','わ':'wa','を':'wo','ん':'n','が':'ga','ぎ':'gi','ぐ':'gu','げ':'ge','ご':'go','ざ':'za','じ':'ji','ず':'zu','ぜ':'ze','ぞ':'zo','だ':'da','で':'de','ど':'do','ば':'ba','び':'bi','ぶ':'bu','べ':'be','ぼ':'bo','ぱ':'pa','ぴ':'pi','ぷ':'pu','ぺ':'pe','ぽ':'po'};
 function k2h(s){return s.split('').map(c=>{const n=c.charCodeAt(0);return(n>=0x30A1&&n<=0x30F6)?String.fromCharCode(n-0x60):c}).join('');}
-function chkAns(inp,correct){const u=inp.replace(/\s/g,'').toLowerCase();if(!u)return false;return String(correct).split(/[／、,]|\s\/\s/).some(p=>{const a=p.replace(/\s/g,'').toLowerCase();if(u===a)return true;const b=a.replace(/\(.*?\)/g,'').replace(/（.*?）/g,'').trim();return b!==''&&u===b;});}
+function normJP(s){return String(s||'').replace(/[～〜]/g,'~').replace(/[ー―‐−]/g,'-');}
+function chkAns(inp,correct){const u=normJP(inp).replace(/\s/g,'').toLowerCase();if(!u)return false;return normJP(correct).split(/[／、,]|\s\/\s/).some(p=>{const a=p.replace(/\s/g,'').toLowerCase();if(u===a)return true;const b=a.replace(/\(.*?\)/g,'').replace(/（.*?）/g,'').trim();return b!==''&&u===b;});}
 function chkDate(inp,correct){
   // 날짜 전용 비교: 공백·'경'·'.' 제거 후 비교. 5/5, 5월5일, 5.5 모두 허용
   const norm=s=>String(s||'').replace(/\s/g,'').replace(/경$/,'').replace(/[.\uc6d4]/g,'/').replace(/일/g,'').replace(/\/+$/,'').replace(/\/+/g,'/');
